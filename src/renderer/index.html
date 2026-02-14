@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subline</title>
+</head>
+<body>
+  <div id="app">
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">FOLDERS</span>
+      </div>
+      <div id="file-tree" class="file-tree"></div>
+    </div>
+    <div id="main-area" class="main-area">
+      <div id="tab-bar" class="tab-bar"></div>
+      <div id="editor-container" class="editor-container">
+        <div id="welcome" class="welcome-screen">
+          <div class="welcome-content">
+            <h1>Subline</h1>
+            <p>Open a file or folder to get started</p>
+            <div class="welcome-shortcuts">
+              <div class="shortcut-item"><kbd>Cmd+O</kbd> Open File</div>
+              <div class="shortcut-item"><kbd>Cmd+N</kbd> New File</div>
+              <div class="shortcut-item"><kbd>Cmd+Shift+P</kbd> Command Palette</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="status-bar" class="status-bar">
+        <div class="status-left">
+          <span id="status-cursor">Ln 1, Col 1</span>
+        </div>
+        <div class="status-right">
+          <span id="status-indent">Spaces: 2</span>
+          <span id="status-encoding">UTF-8</span>
+          <span id="status-language">Plain Text</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="command-palette-overlay" class="command-palette-overlay hidden">
+    <div class="command-palette">
+      <input id="command-input" class="command-input" type="text" placeholder="Type a command..." autocomplete="off" />
+      <div id="command-list" class="command-list"></div>
+    </div>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

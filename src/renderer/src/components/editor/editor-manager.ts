@@ -1,0 +1,270 @@
+import { EditorState, Extension, Compartment } from '@codemirror/state'
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  drawSelection,
+  rectangularSelection,
+  crosshairCursor,
+  highlightSpecialChars
+} from '@codemirror/view'
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
+import {
+  bracketMatching,
+  indentOnInput,
+  syntaxHighlighting,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap
+} from '@codemirror/language'
+import {
+  closeBrackets,
+  closeBracketsKeymap,
+  autocompletion,
+  completionKeymap
+} from '@codemirror/autocomplete'
+import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { createLanguageCompartment, loadLanguage } from './language-support'
+
+export interface EditorTab {
+  id: string
+  filePath: string | null
+  fileName: string
+  state: EditorState
+  savedContent: string
+  isDirty: boolean
+  languageCompartment: Compartment
+}
+
+function basename(filePath: string): string {
+  return filePath.replace(/\\/g, '/').split('/').pop()!
+}
+
+type ChangeCallback = () => void
+
+export class EditorManager {
+  private tabs: Map<string, EditorTab> = new Map()
+  private activeTabId: string | null = null
+  private view: EditorView | null = null
+  private container: HTMLElement
+  private onChangeCallbacks: ChangeCallback[] = []
+  private tabIdCounter = 0
+
+  constructor(container: HTMLElement) {
+    this.container = container
+  }
+
+  onChange(callback: ChangeCallback): void {
+    this.onChangeCallbacks.push(callback)
+  }
+
+  private emitChange(): void {
+    for (const cb of this.onChangeCallbacks) cb()
+  }
+
+  private createExtensions(languageCompartment: Compartment): Extension[] {
+    return [
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      highlightSpecialChars(),
+      history(),
+      foldGutter(),
+      drawSelection(),
+      rectangularSelection(),
+      crosshairCursor(),
+      indentOnInput(),
+      bracketMatching(),
+      closeBrackets(),
+      autocompletion(),
+      highlightActiveLine(),
+      highlightSelectionMatches(),
+      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      keymap.of([
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...closeBracketsKeymap,
+        ...searchKeymap,
+        ...foldKeymap,
+        ...completionKeymap,
+        indentWithTab
+      ]),
+      oneDark,
+      languageCompartment.of([]),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          this.updateDirtyState()
+          this.emitChange()
+        }
+        if (update.selectionSet) {
+          this.emitChange()
+        }
+      })
+    ]
+  }
+
+  createTab(filePath: string | null, content: string, fileName?: string): string {
+    const id = `tab-${++this.tabIdCounter}`
+    const name = fileName || (filePath ? basename(filePath) : 'untitled')
+
+    const { compartment } = createLanguageCompartment()
+
+    const state = EditorState.create({
+      doc: content,
+      extensions: this.createExtensions(compartment)
+    })
+
+    const tab: EditorTab = {
+      id,
+      filePath,
+      fileName: name,
+      state,
+      savedContent: content,
+      isDirty: false,
+      languageCompartment: compartment
+    }
+
+    this.tabs.set(id, tab)
+    return id
+  }
+
+  switchTo(tabId: string): void {
+    const tab = this.tabs.get(tabId)
+    if (!tab) return
+
+    if (this.activeTabId && this.view) {
+      const currentTab = this.tabs.get(this.activeTabId)
+      if (currentTab) {
+        currentTab.state = this.view.state
+      }
+    }
+
+    this.activeTabId = tabId
+
+    if (this.view) {
+      this.view.setState(tab.state)
+    } else {
+      this.view = new EditorView({
+        state: tab.state,
+        parent: this.container
+      })
+    }
+
+    if (tab.filePath && this.view) {
+      const expectedTabId = tabId
+      loadLanguage(tab.filePath, this.view, tab.languageCompartment, () => {
+        return this.activeTabId !== expectedTabId
+      })
+    }
+
+    this.emitChange()
+  }
+
+  closeTab(tabId: string): string | null {
+    const tab = this.tabs.get(tabId)
+    if (!tab) return this.activeTabId
+
+    if (this.activeTabId === tabId && this.view) {
+      tab.state = this.view.state
+    }
+
+    this.tabs.delete(tabId)
+
+    if (this.activeTabId === tabId) {
+      const remaining = Array.from(this.tabs.keys())
+      if (remaining.length > 0) {
+        this.switchTo(remaining[remaining.length - 1])
+        return this.activeTabId
+      } else {
+        if (this.view) {
+          this.view.destroy()
+          this.view = null
+        }
+        this.activeTabId = null
+        this.emitChange()
+        return null
+      }
+    }
+
+    return this.activeTabId
+  }
+
+  private updateDirtyState(): void {
+    if (!this.activeTabId || !this.view) return
+    const tab = this.tabs.get(this.activeTabId)
+    if (!tab) return
+
+    const currentContent = this.view.state.doc.toString()
+    tab.isDirty = currentContent !== tab.savedContent
+  }
+
+  markSaved(tabId: string, filePath?: string): void {
+    const tab = this.tabs.get(tabId)
+    if (!tab) return
+
+    if (this.activeTabId === tabId && this.view) {
+      tab.savedContent = this.view.state.doc.toString()
+    }
+
+    tab.isDirty = false
+
+    if (filePath) {
+      tab.filePath = filePath
+      tab.fileName = basename(filePath)
+      if (this.activeTabId === tabId && this.view) {
+        const expectedTabId = tabId
+        loadLanguage(filePath, this.view, tab.languageCompartment, () => {
+          return this.activeTabId !== expectedTabId
+        })
+      }
+    }
+
+    this.emitChange()
+  }
+
+  getContent(tabId?: string): string {
+    const id = tabId || this.activeTabId
+    if (!id) return ''
+
+    if (id === this.activeTabId && this.view) {
+      return this.view.state.doc.toString()
+    }
+
+    const tab = this.tabs.get(id)
+    return tab ? tab.state.doc.toString() : ''
+  }
+
+  getCursorPosition(): { line: number; col: number } {
+    if (!this.view) return { line: 1, col: 1 }
+    const pos = this.view.state.selection.main.head
+    const line = this.view.state.doc.lineAt(pos)
+    return { line: line.number, col: pos - line.from + 1 }
+  }
+
+  getActiveTab(): EditorTab | null {
+    if (!this.activeTabId) return null
+    return this.tabs.get(this.activeTabId) || null
+  }
+
+  getActiveTabId(): string | null {
+    return this.activeTabId
+  }
+
+  getAllTabs(): EditorTab[] {
+    return Array.from(this.tabs.values())
+  }
+
+  findTabByPath(filePath: string): EditorTab | undefined {
+    return Array.from(this.tabs.values()).find((t) => t.filePath === filePath)
+  }
+
+  hasUnsavedChanges(): boolean {
+    return Array.from(this.tabs.values()).some((t) => t.isDirty)
+  }
+
+  focus(): void {
+    this.view?.focus()
+  }
+}
