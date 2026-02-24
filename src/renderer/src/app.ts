@@ -11,17 +11,19 @@ export class App {
   private statusBar: StatusBar
   private commandPalette: CommandPalette
   private sidebar: HTMLElement
+  private tabBarEl: HTMLElement
   private editorContainer: HTMLElement
   private welcomeScreen: HTMLElement
 
   constructor() {
     this.sidebar = document.getElementById('sidebar')!
+    this.tabBarEl = document.getElementById('tab-bar')!
     this.editorContainer = document.getElementById('editor-container')!
     this.welcomeScreen = document.getElementById('welcome')!
 
     this.editorManager = new EditorManager(this.editorContainer)
     this.tabBar = new TabBar(
-      document.getElementById('tab-bar')!,
+      this.tabBarEl,
       (tabId) => this.selectTab(tabId),
       (tabId) => this.closeTab(tabId)
     )
@@ -144,6 +146,7 @@ export class App {
     if (!folderPath) return
     await this.fileTree.loadFolder(folderPath)
     this.sidebar.classList.remove('hidden')
+    this.syncTrafficLightPadding()
   }
 
   private async saveFile(): Promise<void> {
@@ -194,6 +197,12 @@ export class App {
 
   private toggleSidebar(): void {
     this.sidebar.classList.toggle('hidden')
+    this.syncTrafficLightPadding()
+  }
+
+  private syncTrafficLightPadding(): void {
+    const sidebarHidden = this.sidebar.classList.contains('hidden')
+    this.tabBarEl.classList.toggle('no-sidebar', sidebarHidden)
   }
 
   private onEditorChange(): void {
