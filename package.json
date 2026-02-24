@@ -1,7 +1,11 @@
 {
   "name": "subline",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Sublime Text-like editor built with Electron and CodeMirror 6",
+  "author": {
+    "name": "vamosdalian",
+    "email": "elve960520@gmail.com"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
