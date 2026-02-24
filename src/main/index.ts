@@ -11,6 +11,8 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
+  const isMac = process.platform === 'darwin'
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -19,8 +21,9 @@ function createWindow(): void {
     icon: is.dev
       ? join(__dirname, '../../resources/icon.png')
       : join(process.resourcesPath, 'icon.png'),
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 10 },
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 10 } }
+      : {}),
     backgroundColor: '#272822',
     show: false,
     webPreferences: {

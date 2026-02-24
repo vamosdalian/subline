@@ -29,6 +29,21 @@
       "icon": "resources/icon.icns",
       "target": "dmg",
       "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "icon": "resources/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
     }
   },
   "dependencies": {
