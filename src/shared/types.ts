@@ -12,6 +12,8 @@ export interface TabInfo {
   isDirty: boolean
 }
 
+import type { AppSettings } from './settings'
+
 export interface ElectronAPI {
   readFile(filePath: string): Promise<string>
   writeFile(filePath: string, content: string): Promise<void>
@@ -23,6 +25,8 @@ export interface ElectronAPI {
   saveImageTemp(buffer: Uint8Array): Promise<string>
   migrateImage(tempPath: string, targetDir: string): Promise<string>
   openPath(filePath: string): Promise<void>
+  getSettings(): Promise<AppSettings>
+  setSettings(settings: AppSettings): Promise<void>
   onMenuNewFile(callback: () => void): void
   onMenuOpenFile(callback: () => void): void
   onMenuOpenFolder(callback: () => void): void
@@ -31,6 +35,7 @@ export interface ElectronAPI {
   onMenuCloseTab(callback: () => void): void
   onMenuToggleSidebar(callback: () => void): void
   onMenuCommandPalette(callback: () => void): void
+  onMenuOpenSettings(callback: () => void): void
   setTitle(title: string): void
 }
 

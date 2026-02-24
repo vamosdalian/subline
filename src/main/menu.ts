@@ -16,6 +16,12 @@ export function buildMenu(): void {
             submenu: [
               { role: 'about' as const },
               { type: 'separator' as const },
+              {
+                label: 'Preferences...',
+                accelerator: 'Cmd+,' as const,
+                click: () => send('menu:open-settings')
+              },
+              { type: 'separator' as const },
               { role: 'services' as const },
               { type: 'separator' as const },
               { role: 'hide' as const },
@@ -60,7 +66,17 @@ export function buildMenu(): void {
           label: 'Close Tab',
           accelerator: 'CmdOrCtrl+W',
           click: () => send('menu:close-tab')
-        }
+        },
+        ...(!isMac
+          ? [
+              { type: 'separator' as const },
+              {
+                label: 'Preferences...',
+                accelerator: 'Ctrl+,' as const,
+                click: () => send('menu:open-settings')
+              }
+            ]
+          : [])
       ]
     },
     {

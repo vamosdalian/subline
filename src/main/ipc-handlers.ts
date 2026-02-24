@@ -1,8 +1,26 @@
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import { readFile, writeFile, readdir, stat, mkdir, copyFile, unlink } from 'fs/promises'
 import { join, basename, dirname } from 'path'
-import { tmpdir } from 'os'
+import { tmpdir, homedir } from 'os'
 import { FileTreeNode } from '../shared/types'
+import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
+
+const SETTINGS_DIR = join(homedir(), '.subline')
+const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json')
+
+async function loadSettings(): Promise<AppSettings> {
+  try {
+    const raw = await readFile(SETTINGS_PATH, 'utf-8')
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+  } catch {
+    return { ...DEFAULT_SETTINGS }
+  }
+}
+
+async function saveSettings(settings: AppSettings): Promise<void> {
+  await mkdir(SETTINGS_DIR, { recursive: true })
+  await writeFile(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8')
+}
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileTreeNode[]> {
   if (depth > 10) return []
@@ -114,6 +132,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('shell:open-path', async (_event, filePath: string) => {
     await shell.openPath(filePath)
+  })
+
+  ipcMain.handle('settings:get', async () => {
+    return await loadSettings()
+  })
+
+  ipcMain.handle('settings:set', async (_event, settings: AppSettings) => {
+    await saveSettings(settings)
   })
 
   ipcMain.on('set-title', (event, title: string) => {

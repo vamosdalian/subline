@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ElectronAPI } from '../shared/types'
+import type { AppSettings } from '../shared/settings'
 
 const api: ElectronAPI = {
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
@@ -14,6 +15,8 @@ const api: ElectronAPI = {
   migrateImage: (tempPath: string, targetDir: string) =>
     ipcRenderer.invoke('image:migrate', tempPath, targetDir),
   openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:set', settings),
 
   onMenuNewFile: (callback: () => void) => {
     ipcRenderer.on('menu:new-file', callback)
@@ -38,6 +41,9 @@ const api: ElectronAPI = {
   },
   onMenuCommandPalette: (callback: () => void) => {
     ipcRenderer.on('menu:command-palette', callback)
+  },
+  onMenuOpenSettings: (callback: () => void) => {
+    ipcRenderer.on('menu:open-settings', callback)
   },
   setTitle: (title: string) => {
     ipcRenderer.send('set-title', title)

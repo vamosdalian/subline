@@ -17,7 +17,8 @@ import {
   syntaxHighlighting,
   defaultHighlightStyle,
   foldGutter,
-  foldKeymap
+  foldKeymap,
+  indentUnit
 } from '@codemirror/language'
 import {
   closeBrackets,
@@ -30,6 +31,8 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { createLanguageCompartment, loadLanguage } from './language-support'
 import { createImagePasteExtension } from './image-paste'
 import { createImagePreviewExtension } from './image-widget'
+import type { AppSettings } from '../../../../shared/settings'
+import { DEFAULT_SETTINGS } from '../../../../shared/settings'
 
 export interface EditorTab {
   id: string
@@ -52,6 +55,25 @@ function dirname(filePath: string): string {
 
 type ChangeCallback = () => void
 
+function buildThemeExtension(theme: AppSettings['theme']): Extension {
+  return theme === 'one-dark' ? oneDark : []
+}
+
+function buildFontExtension(fontFamily: string, fontSize: number): Extension {
+  return EditorView.theme({
+    '&': { fontSize: `${fontSize}px` },
+    '.cm-content': { fontFamily },
+    '.cm-gutters': { fontFamily, fontSize: `${fontSize}px` }
+  })
+}
+
+function buildTabExtension(tabSize: number, indentWithTabs: boolean): Extension {
+  return [
+    EditorState.tabSize.of(tabSize),
+    indentUnit.of(indentWithTabs ? '\t' : ' '.repeat(tabSize))
+  ]
+}
+
 export class EditorManager {
   private tabs: Map<string, EditorTab> = new Map()
   private activeTabId: string | null = null
@@ -59,6 +81,10 @@ export class EditorManager {
   private container: HTMLElement
   private onChangeCallbacks: ChangeCallback[] = []
   private tabIdCounter = 0
+  private settings: AppSettings = { ...DEFAULT_SETTINGS }
+  private themeCompartment = new Compartment()
+  private fontCompartment = new Compartment()
+  private tabSizeCompartment = new Compartment()
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -98,7 +124,9 @@ export class EditorManager {
         ...completionKeymap,
         indentWithTab
       ]),
-      oneDark,
+      this.themeCompartment.of(buildThemeExtension(this.settings.theme)),
+      this.fontCompartment.of(buildFontExtension(this.settings.fontFamily, this.settings.fontSize)),
+      this.tabSizeCompartment.of(buildTabExtension(this.settings.tabSize, this.settings.indentWithTabs)),
       languageCompartment.of([]),
       createImagePasteExtension(() => {
         const tab = this.getActiveTab();
@@ -293,6 +321,23 @@ export class EditorManager {
     if (changes.length > 0) {
       this.view.dispatch({ changes })
     }
+  }
+
+  setInitialSettings(settings: AppSettings): void {
+    this.settings = { ...settings }
+  }
+
+  applySettings(settings: AppSettings): void {
+    this.settings = { ...settings }
+    if (!this.view) return
+
+    this.view.dispatch({
+      effects: [
+        this.themeCompartment.reconfigure(buildThemeExtension(settings.theme)),
+        this.fontCompartment.reconfigure(buildFontExtension(settings.fontFamily, settings.fontSize)),
+        this.tabSizeCompartment.reconfigure(buildTabExtension(settings.tabSize, settings.indentWithTabs))
+      ]
+    })
   }
 
   focus(): void {

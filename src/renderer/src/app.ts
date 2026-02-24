@@ -3,6 +3,9 @@ import { TabBar } from './components/editor/tab-bar'
 import { FileTree } from './components/sidebar/file-tree'
 import { StatusBar } from './components/status-bar'
 import { CommandPalette, Command } from './components/command-palette'
+import { SettingsPanel } from './components/settings-panel'
+import type { AppSettings } from '../../shared/settings'
+import { DEFAULT_SETTINGS } from '../../shared/settings'
 
 export class App {
   private editorManager: EditorManager
@@ -10,10 +13,13 @@ export class App {
   private fileTree: FileTree
   private statusBar: StatusBar
   private commandPalette: CommandPalette
+  private settingsPanel: SettingsPanel
   private sidebar: HTMLElement
   private tabBarEl: HTMLElement
   private editorContainer: HTMLElement
   private welcomeScreen: HTMLElement
+  private currentSettings: AppSettings = { ...DEFAULT_SETTINGS }
+  private settingsReady: Promise<void>
 
   constructor() {
     this.sidebar = document.getElementById('sidebar')!
@@ -32,10 +38,14 @@ export class App {
     )
     this.statusBar = new StatusBar()
     this.commandPalette = new CommandPalette()
+    this.settingsPanel = new SettingsPanel()
+
+    this.settingsPanel.onSettingsSave((settings) => this.onSettingsChanged(settings))
 
     this.editorManager.onChange(() => this.onEditorChange())
     this.registerMenuHandlers()
     this.registerCommands()
+    this.settingsReady = this.loadSettings()
   }
 
   private registerMenuHandlers(): void {
@@ -47,6 +57,7 @@ export class App {
     window.api.onMenuCloseTab(() => this.closeActiveTab())
     window.api.onMenuToggleSidebar(() => this.toggleSidebar())
     window.api.onMenuCommandPalette(() => this.commandPalette.toggle())
+    window.api.onMenuOpenSettings(() => this.openSettings())
   }
 
   private registerCommands(): void {
@@ -94,6 +105,12 @@ export class App {
         label: 'Toggle Sidebar',
         shortcut: `${mod}+B`,
         execute: () => this.toggleSidebar()
+      },
+      {
+        id: 'preferences.open',
+        label: 'Preferences: Open Settings',
+        shortcut: `${mod}+,`,
+        execute: () => this.openSettings()
       }
     ]
 
@@ -195,6 +212,28 @@ export class App {
   private closeActiveTab(): void {
     const tabId = this.editorManager.getActiveTabId()
     if (tabId) this.closeTab(tabId)
+  }
+
+  private async loadSettings(): Promise<void> {
+    this.currentSettings = await window.api.getSettings()
+    this.editorManager.setInitialSettings(this.currentSettings)
+    this.applyThemeToUI(this.currentSettings.theme)
+  }
+
+  private async openSettings(): Promise<void> {
+    await this.settingsReady
+    this.settingsPanel.toggle(this.currentSettings)
+  }
+
+  private async onSettingsChanged(settings: AppSettings): Promise<void> {
+    this.currentSettings = settings
+    this.editorManager.applySettings(settings)
+    this.applyThemeToUI(settings.theme)
+    await window.api.setSettings(settings)
+  }
+
+  private applyThemeToUI(theme: AppSettings['theme']): void {
+    document.body.classList.toggle('theme-light', theme === 'light')
   }
 
   private toggleSidebar(): void {
