@@ -36,7 +36,6 @@ export interface EditorTab {
   filePath: string | null
   fileName: string
   state: EditorState
-  savedContent: string
   isDirty: boolean
   languageCompartment: Compartment
 }
@@ -111,7 +110,8 @@ export class EditorManager {
       }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
-          this.updateDirtyState()
+          const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null
+          if (tab) tab.isDirty = true
           this.emitChange()
         }
         if (update.selectionSet) {
@@ -137,7 +137,6 @@ export class EditorManager {
       filePath,
       fileName: name,
       state,
-      savedContent: content,
       isDirty: false,
       languageCompartment: compartment
     }
@@ -207,22 +206,9 @@ export class EditorManager {
     return this.activeTabId
   }
 
-  private updateDirtyState(): void {
-    if (!this.activeTabId || !this.view) return
-    const tab = this.tabs.get(this.activeTabId)
-    if (!tab) return
-
-    const currentContent = this.view.state.doc.toString()
-    tab.isDirty = currentContent !== tab.savedContent
-  }
-
   markSaved(tabId: string, filePath?: string): void {
     const tab = this.tabs.get(tabId)
     if (!tab) return
-
-    if (this.activeTabId === tabId && this.view) {
-      tab.savedContent = this.view.state.doc.toString()
-    }
 
     tab.isDirty = false
 
