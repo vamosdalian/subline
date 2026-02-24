@@ -6,7 +6,30 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "pack": "electron-vite build && electron-builder --dir",
+    "dist": "electron-vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.subline.app",
+    "productName": "Subline",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "mac": {
+      "icon": "resources/icon.icns",
+      "target": "dmg",
+      "category": "public.app-category.developer-tools"
+    }
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.0",
@@ -27,6 +50,7 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^2.3.0",
     "typescript": "^5.6.0",
     "vite": "^5.4.0"

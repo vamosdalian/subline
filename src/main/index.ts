@@ -16,7 +16,9 @@ function createWindow(): void {
     height: 800,
     minWidth: 600,
     minHeight: 400,
-    icon: join(__dirname, '../../resources/icon.png'),
+    icon: is.dev
+      ? join(__dirname, '../../resources/icon.png')
+      : join(process.resourcesPath, 'icon.png'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 10 },
     backgroundColor: '#272822',
@@ -50,7 +52,10 @@ app.whenReady().then(() => {
   })
 
   if (process.platform === 'darwin') {
-    const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'))
+    const iconPath = is.dev
+      ? join(__dirname, '../../resources/icon.png')
+      : join(process.resourcesPath, 'icon.png')
+    const icon = nativeImage.createFromPath(iconPath)
     app.dock.setIcon(icon)
   }
 
