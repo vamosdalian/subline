@@ -19,6 +19,9 @@ export interface ElectronAPI {
   openFolderDialog(): Promise<string | null>
   saveFileDialog(defaultPath?: string): Promise<string | null>
   readDirectoryTree(dirPath: string): Promise<FileTreeNode[]>
+  saveImage(buffer: Uint8Array, dirPath: string): Promise<string>
+  saveImageTemp(buffer: Uint8Array): Promise<string>
+  migrateImage(tempPath: string, targetDir: string): Promise<string>
   onMenuNewFile(callback: () => void): void
   onMenuOpenFile(callback: () => void): void
   onMenuOpenFolder(callback: () => void): void

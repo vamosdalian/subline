@@ -154,6 +154,7 @@ export class App {
     if (!tab) return
 
     if (tab.filePath) {
+      await this.editorManager.migrateTemporaryImages(tab.filePath)
       const content = this.editorManager.getContent()
       await window.api.writeFile(tab.filePath, content)
       this.editorManager.markSaved(tab.id)
@@ -170,6 +171,7 @@ export class App {
     const filePath = await window.api.saveFileDialog(tab.filePath || undefined)
     if (!filePath) return
 
+    await this.editorManager.migrateTemporaryImages(filePath)
     const content = this.editorManager.getContent()
     await window.api.writeFile(filePath, content)
     this.editorManager.markSaved(tab.id, filePath)

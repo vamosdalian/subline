@@ -8,6 +8,11 @@ const api: ElectronAPI = {
   openFolderDialog: () => ipcRenderer.invoke('folder:open-dialog'),
   saveFileDialog: (defaultPath?: string) => ipcRenderer.invoke('file:save-dialog', defaultPath),
   readDirectoryTree: (dirPath: string) => ipcRenderer.invoke('folder:read-tree', dirPath),
+  saveImage: (buffer: Uint8Array, dirPath: string) =>
+    ipcRenderer.invoke('image:save', buffer, dirPath),
+  saveImageTemp: (buffer: Uint8Array) => ipcRenderer.invoke('image:save-temp', buffer),
+  migrateImage: (tempPath: string, targetDir: string) =>
+    ipcRenderer.invoke('image:migrate', tempPath, targetDir),
 
   onMenuNewFile: (callback: () => void) => {
     ipcRenderer.on('menu:new-file', callback)

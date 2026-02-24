@@ -1,8 +1,12 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, protocol, net } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc-handlers'
 import { buildMenu } from './menu'
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'local-file', privileges: { bypassCSP: true, stream: true, supportFetchAPI: true } }
+])
 
 let mainWindow: BrowserWindow | null = null
 
@@ -39,6 +43,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  protocol.handle('local-file', (request) => {
+    const pathPart = request.url.slice('local-file://'.length)
+    return net.fetch('file://' + pathPart)
+  })
+
   registerIpcHandlers()
   buildMenu()
   createWindow()

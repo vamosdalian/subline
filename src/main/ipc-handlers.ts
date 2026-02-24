@@ -1,6 +1,7 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
-import { readFile, writeFile, readdir, stat } from 'fs/promises'
-import { join, basename } from 'path'
+import { readFile, writeFile, readdir, stat, mkdir, copyFile, unlink } from 'fs/promises'
+import { join, basename, dirname } from 'path'
+import { tmpdir } from 'os'
 import { FileTreeNode } from '../shared/types'
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileTreeNode[]> {
@@ -82,6 +83,33 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('folder:read-tree', async (_event, dirPath: string) => {
     return await buildTree(dirPath)
+  })
+
+  ipcMain.handle('image:save', async (_event, buffer: Uint8Array, dirPath: string) => {
+    const imagesDir = join(dirPath, 'images')
+    await mkdir(imagesDir, { recursive: true })
+    const fileName = `${Date.now()}.png`
+    await writeFile(join(imagesDir, fileName), buffer)
+    return `./images/${fileName}`
+  })
+
+  ipcMain.handle('image:save-temp', async (_event, buffer: Uint8Array) => {
+    const tempDir = join(tmpdir(), 'subline-images')
+    await mkdir(tempDir, { recursive: true })
+    const fileName = `${Date.now()}.png`
+    const filePath = join(tempDir, fileName)
+    await writeFile(filePath, buffer)
+    return filePath
+  })
+
+  ipcMain.handle('image:migrate', async (_event, tempPath: string, targetDir: string) => {
+    const imagesDir = join(targetDir, 'images')
+    await mkdir(imagesDir, { recursive: true })
+    const fileName = basename(tempPath)
+    const targetPath = join(imagesDir, fileName)
+    await copyFile(tempPath, targetPath)
+    await unlink(tempPath)
+    return `./images/${fileName}`
   })
 
   ipcMain.on('set-title', (event, title: string) => {

@@ -28,6 +28,8 @@ import {
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { createLanguageCompartment, loadLanguage } from './language-support'
+import { createImagePasteExtension } from './image-paste'
+import { createImagePreviewExtension } from './image-widget'
 
 export interface EditorTab {
   id: string
@@ -41,6 +43,12 @@ export interface EditorTab {
 
 function basename(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').pop()!
+}
+
+function dirname(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/')
+  const idx = normalized.lastIndexOf('/')
+  return idx === -1 ? '.' : normalized.slice(0, idx)
 }
 
 type ChangeCallback = () => void
@@ -93,6 +101,14 @@ export class EditorManager {
       ]),
       oneDark,
       languageCompartment.of([]),
+      createImagePasteExtension(() => {
+        const tab = this.getActiveTab()
+        return { filePath: tab?.filePath || null, fileName: tab?.fileName || null }
+      }),
+      createImagePreviewExtension(() => {
+        const tab = this.getActiveTab()
+        return tab?.filePath ? dirname(tab.filePath) : ''
+      }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           this.updateDirtyState()
@@ -262,6 +278,32 @@ export class EditorManager {
 
   hasUnsavedChanges(): boolean {
     return Array.from(this.tabs.values()).some((t) => t.isDirty)
+  }
+
+  async migrateTemporaryImages(filePath: string): Promise<void> {
+    if (!this.activeTabId || !this.view) return
+
+    const content = this.view.state.doc.toString()
+    const regex = /!\[([^\]]*)\]\(([^)]+)\)/g
+    const changes: { from: number; to: number; insert: string }[] = []
+    const targetDir = dirname(filePath)
+    let match: RegExpExecArray | null
+
+    while ((match = regex.exec(content)) !== null) {
+      const src = match[2]
+      if (!src.includes('/subline-images/')) continue
+
+      const newPath = await window.api.migrateImage(src, targetDir)
+      changes.push({
+        from: match.index,
+        to: match.index + match[0].length,
+        insert: `![${match[1]}](${newPath})`
+      })
+    }
+
+    if (changes.length > 0) {
+      this.view.dispatch({ changes })
+    }
   }
 
   focus(): void {
