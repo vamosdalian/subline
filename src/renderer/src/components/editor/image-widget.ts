@@ -15,6 +15,10 @@ class ImageWidget extends WidgetType {
     return this.src === other.src
   }
 
+  ignoreEvent(event: Event): boolean {
+    return event.type === 'dblclick'
+  }
+
   toDOM(): HTMLElement {
     const wrapper = document.createElement('div')
     wrapper.className = 'cm-image-preview'
@@ -26,8 +30,13 @@ class ImageWidget extends WidgetType {
     img.style.maxHeight = '300px'
     img.style.borderRadius = '4px'
     img.style.display = 'block'
+    img.style.cursor = 'pointer'
     img.onerror = () => {
       wrapper.style.display = 'none'
+    }
+    img.ondblclick = (e) => {
+      e.preventDefault()
+      window.api.openPath(this.resolvedSrc())
     }
 
     wrapper.appendChild(img)

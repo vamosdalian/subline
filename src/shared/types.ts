@@ -22,6 +22,7 @@ export interface ElectronAPI {
   saveImage(buffer: Uint8Array, dirPath: string): Promise<string>
   saveImageTemp(buffer: Uint8Array): Promise<string>
   migrateImage(tempPath: string, targetDir: string): Promise<string>
+  openPath(filePath: string): Promise<void>
   onMenuNewFile(callback: () => void): void
   onMenuOpenFile(callback: () => void): void
   onMenuOpenFolder(callback: () => void): void

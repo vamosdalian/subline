@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import { readFile, writeFile, readdir, stat, mkdir, copyFile, unlink } from 'fs/promises'
 import { join, basename, dirname } from 'path'
 import { tmpdir } from 'os'
@@ -110,6 +110,10 @@ export function registerIpcHandlers(): void {
     await copyFile(tempPath, targetPath)
     await unlink(tempPath)
     return `./images/${fileName}`
+  })
+
+  ipcMain.handle('shell:open-path', async (_event, filePath: string) => {
+    await shell.openPath(filePath)
   })
 
   ipcMain.on('set-title', (event, title: string) => {

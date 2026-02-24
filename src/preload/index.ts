@@ -13,6 +13,7 @@ const api: ElectronAPI = {
   saveImageTemp: (buffer: Uint8Array) => ipcRenderer.invoke('image:save-temp', buffer),
   migrateImage: (tempPath: string, targetDir: string) =>
     ipcRenderer.invoke('image:migrate', tempPath, targetDir),
+  openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
 
   onMenuNewFile: (callback: () => void) => {
     ipcRenderer.on('menu:new-file', callback)
