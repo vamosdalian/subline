@@ -32,16 +32,20 @@
     "mac": {
       "icon": "resources/icon.icns",
       "target": "dmg",
-      "category": "public.app-category.developer-tools",
-      "generateBlockmap": false
+      "category": "public.app-category.developer-tools"
+    },
+    "dmg": {
+      "writeUpdateInfo": false
     },
     "win": {
       "icon": "resources/icon.ico",
       "target": [
         "nsis",
         "portable"
-      ],
-      "generateBlockmap": false
+      ]
+    },
+    "nsis": {
+      "differentialPackage": false
     },
     "linux": {
       "icon": "resources/icon.png",
