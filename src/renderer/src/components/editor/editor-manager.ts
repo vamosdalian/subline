@@ -101,8 +101,11 @@ export class EditorManager {
       oneDark,
       languageCompartment.of([]),
       createImagePasteExtension(() => {
-        const tab = this.getActiveTab()
-        return { filePath: tab?.filePath || null, fileName: tab?.fileName || null }
+        const tab = this.getActiveTab();
+        return {
+          filePath: tab?.filePath ?? "",
+          fileName: tab?.fileName ?? ""
+        };
       }),
       createImagePreviewExtension(() => {
         const tab = this.getActiveTab()

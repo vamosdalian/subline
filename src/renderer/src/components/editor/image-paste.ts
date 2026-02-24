@@ -28,9 +28,9 @@ export function createImagePasteExtension(
       if (!items) return false
 
       let imageItem: DataTransferItem | null = null
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          imageItem = item
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          imageItem = items[i]
           break
         }
       }
