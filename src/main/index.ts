@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, net } from 'electron'
+import { app, BrowserWindow, shell, protocol, net, nativeImage } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc-handlers'
@@ -16,6 +16,7 @@ function createWindow(): void {
     height: 800,
     minWidth: 600,
     minHeight: 400,
+    icon: join(__dirname, '../../resources/icon.png'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 10 },
     backgroundColor: '#272822',
@@ -47,6 +48,11 @@ app.whenReady().then(() => {
     const pathPart = request.url.slice('local-file://'.length)
     return net.fetch('file://' + pathPart)
   })
+
+  if (process.platform === 'darwin') {
+    const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'))
+    app.dock.setIcon(icon)
+  }
 
   registerIpcHandlers()
   buildMenu()
