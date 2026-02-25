@@ -31,7 +31,11 @@ export class App {
     this.tabBar = new TabBar(
       this.tabBarEl,
       (tabId) => this.selectTab(tabId),
-      (tabId) => this.closeTab(tabId)
+      (tabId) => this.closeTab(tabId),
+      (from, to) => {
+        this.editorManager.reorderTabs(from, to)
+        this.updateUI()
+      }
     )
     this.fileTree = new FileTree(document.getElementById('file-tree')!, (filePath) =>
       this.openFile(filePath)

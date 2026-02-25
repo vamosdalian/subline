@@ -294,6 +294,13 @@ export class EditorManager {
     return Array.from(this.tabs.values())
   }
 
+  reorderTabs(fromIndex: number, toIndex: number): void {
+    const entries = Array.from(this.tabs.entries())
+    const [moved] = entries.splice(fromIndex, 1)
+    entries.splice(toIndex, 0, moved)
+    this.tabs = new Map(entries)
+  }
+
   findTabByPath(filePath: string): EditorTab | undefined {
     return Array.from(this.tabs.values()).find((t) => t.filePath === filePath)
   }
