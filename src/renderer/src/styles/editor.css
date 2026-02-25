@@ -108,3 +108,85 @@
 .status-right span {
   cursor: default;
 }
+
+.cm-editor .cm-panels {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.cm-editor .cm-search {
+  padding: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.cm-editor .cm-search .cm-textfield {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 3px 8px;
+  outline: none;
+  font-family: inherit;
+}
+
+.cm-editor .cm-search .cm-textfield:focus {
+  border-color: var(--accent-blue);
+}
+
+.cm-editor .cm-search .cm-button {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cm-editor .cm-search .cm-button:hover {
+  background: var(--bg-selection);
+}
+
+.cm-editor .cm-search .cm-button:active {
+  background: var(--border);
+}
+
+.cm-editor .cm-search label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  gap: 2px;
+}
+
+.cm-editor .cm-search label input[type="checkbox"] {
+  vertical-align: middle;
+}
+
+.cm-editor .cm-search [name="close"] {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.cm-editor .cm-search [name="close"]:hover {
+  color: var(--text-primary);
+}
+
+.cm-editor .cm-searchMatch {
+  background: rgba(255, 200, 0, 0.3);
+}
+
+.cm-editor .cm-searchMatch-selected {
+  background: rgba(255, 150, 0, 0.5);
+}
