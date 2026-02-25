@@ -5,6 +5,31 @@ function q<T extends HTMLElement>(root: HTMLElement, selector: string): T {
   return root.querySelector(selector)! as T
 }
 
+const FONT_CANDIDATES = [
+  { label: 'Menlo', primary: 'Menlo', value: "Menlo, Monaco, 'Courier New', monospace" },
+  { label: 'Monaco', primary: 'Monaco', value: "Monaco, Menlo, 'Courier New', monospace" },
+  { label: 'SF Mono', primary: 'SF Mono', value: "'SF Mono', Menlo, Monaco, monospace" },
+  { label: 'Fira Code', primary: 'Fira Code', value: "'Fira Code', Menlo, monospace" },
+  { label: 'JetBrains Mono', primary: 'JetBrains Mono', value: "'JetBrains Mono', Menlo, monospace" },
+  { label: 'Source Code Pro', primary: 'Source Code Pro', value: "'Source Code Pro', Menlo, monospace" },
+  { label: 'Consolas', primary: 'Consolas', value: "Consolas, 'Courier New', monospace" },
+  { label: 'Courier New', primary: 'Courier New', value: "'Courier New', Courier, monospace" }
+]
+
+function isFontInstalled(fontName: string): boolean {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+  const text = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  ctx.font = '72px monospace'
+  const fallbackWidth = ctx.measureText(text).width
+  ctx.font = `72px "${fontName}", monospace`
+  return ctx.measureText(text).width !== fallbackWidth
+}
+
+function getAvailableFonts(): typeof FONT_CANDIDATES {
+  return FONT_CANDIDATES.filter((f) => isFontInstalled(f.primary))
+}
+
 export class SettingsPanel {
   private overlay: HTMLElement
   private isVisible = false
@@ -46,7 +71,9 @@ export class SettingsPanel {
             <div class="settings-row">
               <span class="settings-label">Font Family</span>
               <div class="settings-control">
-                <input data-key="fontFamily" type="text" placeholder="Menlo, Monaco, monospace" />
+                <select data-key="fontFamily">
+                  ${getAvailableFonts().map((f) => `<option value="${f.value}">${f.label}</option>`).join('')}
+                </select>
               </div>
             </div>
             <div class="settings-row">
@@ -88,7 +115,7 @@ export class SettingsPanel {
   private bindControls(): void {
     const root = this.overlay
     const themeSelect = q<HTMLSelectElement>(root, '[data-key="theme"]')
-    const fontFamilyInput = q<HTMLInputElement>(root, '[data-key="fontFamily"]')
+    const fontFamilySelect = q<HTMLSelectElement>(root, '[data-key="fontFamily"]')
     const fontSizeInput = q<HTMLInputElement>(root, '[data-key="fontSize"]')
     const fontSizeValue = q(root, '[data-display="fontSize"]')
     const tabSizeSelect = q<HTMLSelectElement>(root, '[data-key="tabSize"]')
@@ -99,8 +126,8 @@ export class SettingsPanel {
       this.emitSave()
     })
 
-    fontFamilyInput.addEventListener('change', () => {
-      this.settings.fontFamily = fontFamilyInput.value || DEFAULT_SETTINGS.fontFamily
+    fontFamilySelect.addEventListener('change', () => {
+      this.settings.fontFamily = fontFamilySelect.value
       this.emitSave()
     })
 
@@ -128,7 +155,13 @@ export class SettingsPanel {
     const root = this.overlay
     const s = this.settings
     q<HTMLSelectElement>(root, '[data-key="theme"]').value = s.theme
-    q<HTMLInputElement>(root, '[data-key="fontFamily"]').value = s.fontFamily
+    const fontSelect = q<HTMLSelectElement>(root, '[data-key="fontFamily"]')
+    const hasMatch = Array.from(fontSelect.options).some((o) => o.value === s.fontFamily)
+    if (hasMatch) {
+      fontSelect.value = s.fontFamily
+    } else {
+      fontSelect.value = fontSelect.options[0].value
+    }
     q<HTMLInputElement>(root, '[data-key="fontSize"]').value = String(s.fontSize)
     q(root, '[data-display="fontSize"]').textContent = `${s.fontSize}px`
     q<HTMLSelectElement>(root, '[data-key="tabSize"]').value = String(s.tabSize)
