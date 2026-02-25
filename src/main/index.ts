@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, net, nativeImage } from 'electron'
+import { app, BrowserWindow, shell, protocol, net, nativeImage, ipcMain } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc-handlers'
@@ -29,6 +29,22 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
+    }
+  })
+
+  let forceClose = false
+
+  mainWindow.on('close', (event) => {
+    if (forceClose) return
+
+    event.preventDefault()
+    mainWindow!.webContents.send('app:before-close')
+  })
+
+  ipcMain.on('app:close-response', (_event, canClose: boolean) => {
+    if (canClose && mainWindow) {
+      forceClose = true
+      mainWindow.close()
     }
   })
 

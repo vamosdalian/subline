@@ -27,6 +27,9 @@ export interface ElectronAPI {
   openPath(filePath: string): Promise<void>
   getSettings(): Promise<AppSettings>
   setSettings(settings: AppSettings): Promise<void>
+  showConfirmSave(fileName: string): Promise<'save' | 'discard' | 'cancel'>
+  onAppBeforeClose(callback: () => void): void
+  confirmClose(canClose: boolean): void
   onMenuNewFile(callback: () => void): void
   onMenuOpenFile(callback: () => void): void
   onMenuOpenFolder(callback: () => void): void
