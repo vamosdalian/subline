@@ -276,6 +276,10 @@ export class EditorManager {
     return { line: line.number, col: pos - line.from + 1 }
   }
 
+  getTab(tabId: string): EditorTab | null {
+    return this.tabs.get(tabId) || null
+  }
+
   getActiveTab(): EditorTab | null {
     if (!this.activeTabId) return null
     return this.tabs.get(this.activeTabId) || null

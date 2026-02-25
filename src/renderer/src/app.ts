@@ -45,6 +45,7 @@ export class App {
     this.editorManager.onChange(() => this.onEditorChange())
     this.registerMenuHandlers()
     this.registerCommands()
+    this.registerBeforeClose()
     this.settingsReady = this.loadSettings()
   }
 
@@ -201,17 +202,80 @@ export class App {
     this.editorManager.focus()
   }
 
-  private closeTab(tabId: string): void {
-    const result = this.editorManager.closeTab(tabId)
-    this.updateUI()
-    if (result) {
-      this.editorManager.focus()
+  private async closeTab(tabId: string): Promise<void> {
+    const closed = await this.confirmAndCloseTab(tabId)
+    if (closed) {
+      this.updateUI()
+      if (this.editorManager.getActiveTabId()) {
+        this.editorManager.focus()
+      }
     }
   }
 
-  private closeActiveTab(): void {
+  private async closeActiveTab(): Promise<void> {
     const tabId = this.editorManager.getActiveTabId()
-    if (tabId) this.closeTab(tabId)
+    if (tabId) await this.closeTab(tabId)
+  }
+
+  private async confirmAndCloseTab(tabId: string): Promise<boolean> {
+    const tab = this.editorManager.getTab(tabId)
+    if (!tab) return false
+
+    if (tab.isDirty) {
+      const choice = await window.api.showConfirmSave(tab.fileName)
+      if (choice === 'cancel') return false
+      if (choice === 'save') {
+        await this.saveSpecificTab(tabId)
+        const updated = this.editorManager.getTab(tabId)
+        if (updated?.isDirty) return false
+      }
+    }
+
+    this.editorManager.closeTab(tabId)
+    return true
+  }
+
+  private async saveSpecificTab(tabId: string): Promise<void> {
+    const tab = this.editorManager.getTab(tabId)
+    if (!tab) return
+
+    if (tab.filePath) {
+      await this.editorManager.migrateTemporaryImages(tab.filePath)
+      const content = this.editorManager.getContent(tabId)
+      await window.api.writeFile(tab.filePath, content)
+      this.editorManager.markSaved(tabId)
+    } else {
+      const filePath = await window.api.saveFileDialog()
+      if (!filePath) return
+      await this.editorManager.migrateTemporaryImages(filePath)
+      const content = this.editorManager.getContent(tabId)
+      await window.api.writeFile(filePath, content)
+      this.editorManager.markSaved(tabId, filePath)
+    }
+  }
+
+  private registerBeforeClose(): void {
+    window.api.onAppBeforeClose(async () => {
+      const dirtyTabs = this.editorManager.getAllTabs().filter((t) => t.isDirty)
+
+      for (const tab of dirtyTabs) {
+        const choice = await window.api.showConfirmSave(tab.fileName)
+        if (choice === 'cancel') {
+          window.api.confirmClose(false)
+          return
+        }
+        if (choice === 'save') {
+          await this.saveSpecificTab(tab.id)
+          const updated = this.editorManager.getTab(tab.id)
+          if (updated?.isDirty) {
+            window.api.confirmClose(false)
+            return
+          }
+        }
+      }
+
+      window.api.confirmClose(true)
+    })
   }
 
   private async loadSettings(): Promise<void> {

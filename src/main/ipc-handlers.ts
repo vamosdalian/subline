@@ -142,6 +142,25 @@ export function registerIpcHandlers(): void {
     await saveSettings(settings)
   })
 
+  ipcMain.handle('dialog:confirm-save', async (_event, fileName: string) => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (!win) return 'discard'
+
+    const result = await dialog.showMessageBox(win, {
+      type: 'warning',
+      message: `Do you want to save changes to "${fileName}"?`,
+      detail: 'Your changes will be lost if you don\'t save them.',
+      buttons: ['Don\'t Save', 'Cancel', 'Save'],
+      defaultId: 2,
+      cancelId: 1,
+      noLink: true
+    })
+
+    if (result.response === 2) return 'save'
+    if (result.response === 0) return 'discard'
+    return 'cancel'
+  })
+
   ipcMain.on('set-title', (event, title: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) win.setTitle(title)

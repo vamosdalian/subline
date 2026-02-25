@@ -17,6 +17,13 @@ const api: ElectronAPI = {
   openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:set', settings),
+  showConfirmSave: (fileName: string) => ipcRenderer.invoke('dialog:confirm-save', fileName),
+  onAppBeforeClose: (callback: () => void) => {
+    ipcRenderer.on('app:before-close', callback)
+  },
+  confirmClose: (canClose: boolean) => {
+    ipcRenderer.send('app:close-response', canClose)
+  },
 
   onMenuNewFile: (callback: () => void) => {
     ipcRenderer.on('menu:new-file', callback)
