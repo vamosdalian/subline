@@ -62,7 +62,7 @@ function buildThemeExtension(theme: AppSettings['theme']): Extension {
 function buildFontExtension(fontFamily: string, fontSize: number): Extension {
   return EditorView.theme({
     '&': { fontSize: `${fontSize}px` },
-    '.cm-content': { fontFamily },
+    '.cm-content': { fontFamily, fontSize: `${fontSize}px` },
     '.cm-gutters': { fontFamily, fontSize: `${fontSize}px` }
   })
 }
