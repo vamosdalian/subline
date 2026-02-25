@@ -18,6 +18,7 @@ export class App {
   private tabBarEl: HTMLElement
   private editorContainer: HTMLElement
   private welcomeScreen: HTMLElement
+  private statusBarEl: HTMLElement
   private currentSettings: AppSettings = { ...DEFAULT_SETTINGS }
   private settingsReady: Promise<void>
 
@@ -26,6 +27,8 @@ export class App {
     this.tabBarEl = document.getElementById('tab-bar')!
     this.editorContainer = document.getElementById('editor-container')!
     this.welcomeScreen = document.getElementById('welcome')!
+    this.statusBarEl = document.getElementById('status-bar')!
+    this.statusBarEl.style.display = 'none'
 
     if (localStorage.getItem('sidebarHidden') === 'true') {
       this.sidebar.classList.add('hidden')
@@ -387,6 +390,7 @@ export class App {
 
     if (activeTab) {
       this.welcomeScreen.style.display = 'none'
+      this.statusBarEl.style.display = ''
       const cursor = this.editorManager.getCursorPosition()
       this.statusBar.update(cursor, activeTab.filePath)
       this.fileTree.setActiveFile(activeTab.filePath)
@@ -397,6 +401,7 @@ export class App {
       window.api.setTitle(title)
     } else {
       this.welcomeScreen.style.display = 'flex'
+      this.statusBarEl.style.display = 'none'
       this.statusBar.reset()
       this.fileTree.setActiveFile(null)
       window.api.setTitle('Subline')
