@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell, protocol, net, nativeImage, ipcMain } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { registerIpcHandlers } from './ipc-handlers'
+import { registerIpcHandlers, loadRecentItems } from './ipc-handlers'
 import { buildMenu } from './menu'
 
 protocol.registerSchemesAsPrivileged([
@@ -64,7 +64,7 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   protocol.handle('local-file', (request) => {
     const pathPart = request.url.slice('local-file://'.length)
     return net.fetch('file://' + pathPart)
@@ -79,7 +79,8 @@ app.whenReady().then(() => {
   }
 
   registerIpcHandlers()
-  buildMenu()
+  const recent = await loadRecentItems()
+  buildMenu(recent)
   createWindow()
 
   app.on('activate', () => {
