@@ -1,12 +1,33 @@
 import { Menu, BrowserWindow, app } from 'electron'
+import { writeFile } from 'fs/promises'
+import { join, basename } from 'path'
+import type { RecentItem } from '../shared/types'
 
-function send(channel: string): void {
+function send(channel: string, ...args: unknown[]): void {
   const win = BrowserWindow.getFocusedWindow()
-  if (win) win.webContents.send(channel)
+  if (win) win.webContents.send(channel, ...args)
 }
 
-export function buildMenu(): void {
+export function buildMenu(recentItems: RecentItem[] = []): void {
   const isMac = process.platform === 'darwin'
+
+  const recentSubmenu: Electron.MenuItemConstructorOptions[] =
+    recentItems.length > 0
+      ? [
+          ...recentItems.map((item) => ({
+            label: basename(item.path),
+            click: () => send('menu:open-recent', item.path, item.type)
+          })),
+          { type: 'separator' as const },
+          {
+            label: 'Clear Recent',
+            click: async () => {
+              await writeFile(join(app.getPath('userData'), 'recent.json'), '[]', 'utf-8')
+              buildMenu([])
+            }
+          }
+        ]
+      : [{ label: 'No Recent Files', enabled: false }]
 
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac
@@ -49,6 +70,10 @@ export function buildMenu(): void {
         {
           label: 'Open Folder...',
           click: () => send('menu:open-folder')
+        },
+        {
+          label: 'Open Recent',
+          submenu: recentSubmenu
         },
         { type: 'separator' },
         {

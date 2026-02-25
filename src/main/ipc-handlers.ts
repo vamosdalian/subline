@@ -1,12 +1,15 @@
-import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
 import { readFile, writeFile, readdir, stat, mkdir, copyFile, unlink } from 'fs/promises'
 import { join, basename, dirname } from 'path'
-import { tmpdir, homedir } from 'os'
-import { FileTreeNode } from '../shared/types'
+import { tmpdir } from 'os'
+import { FileTreeNode, RecentItem } from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
+import { buildMenu } from './menu'
 
-const SETTINGS_DIR = join(homedir(), '.subline')
+const SETTINGS_DIR = app.getPath('userData')
 const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json')
+const RECENT_PATH = join(SETTINGS_DIR, 'recent.json')
+const MAX_RECENT = 20
 
 async function loadSettings(): Promise<AppSettings> {
   try {
@@ -20,6 +23,29 @@ async function loadSettings(): Promise<AppSettings> {
 async function saveSettings(settings: AppSettings): Promise<void> {
   await mkdir(SETTINGS_DIR, { recursive: true })
   await writeFile(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8')
+}
+
+export async function loadRecentItems(): Promise<RecentItem[]> {
+  try {
+    const raw = await readFile(RECENT_PATH, 'utf-8')
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+async function saveRecentItems(items: RecentItem[]): Promise<void> {
+  await mkdir(SETTINGS_DIR, { recursive: true })
+  await writeFile(RECENT_PATH, JSON.stringify(items, null, 2), 'utf-8')
+}
+
+async function addRecentItem(path: string, type: RecentItem['type']): Promise<RecentItem[]> {
+  let items = await loadRecentItems()
+  items = items.filter((i) => i.path !== path)
+  items.unshift({ path, type, timestamp: Date.now() })
+  if (items.length > MAX_RECENT) items = items.slice(0, MAX_RECENT)
+  await saveRecentItems(items)
+  return items
 }
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileTreeNode[]> {
@@ -159,6 +185,20 @@ export function registerIpcHandlers(): void {
     if (result.response === 2) return 'save'
     if (result.response === 0) return 'discard'
     return 'cancel'
+  })
+
+  ipcMain.handle('recent:get', async () => {
+    return await loadRecentItems()
+  })
+
+  ipcMain.handle('recent:add', async (_event, path: string, type: RecentItem['type']) => {
+    const items = await addRecentItem(path, type)
+    buildMenu(items)
+  })
+
+  ipcMain.handle('recent:clear', async () => {
+    await saveRecentItems([])
+    buildMenu([])
   })
 
   ipcMain.on('set-title', (event, title: string) => {

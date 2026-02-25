@@ -12,6 +12,12 @@ export interface TabInfo {
   isDirty: boolean
 }
 
+export interface RecentItem {
+  path: string
+  type: 'file' | 'folder'
+  timestamp: number
+}
+
 import type { AppSettings } from './settings'
 
 export interface ElectronAPI {
@@ -27,6 +33,9 @@ export interface ElectronAPI {
   openPath(filePath: string): Promise<void>
   getSettings(): Promise<AppSettings>
   setSettings(settings: AppSettings): Promise<void>
+  getRecent(): Promise<RecentItem[]>
+  addRecent(path: string, type: RecentItem['type']): Promise<void>
+  clearRecent(): Promise<void>
   showConfirmSave(fileName: string): Promise<'save' | 'discard' | 'cancel'>
   onAppBeforeClose(callback: () => void): void
   confirmClose(canClose: boolean): void
@@ -39,6 +48,7 @@ export interface ElectronAPI {
   onMenuToggleSidebar(callback: () => void): void
   onMenuCommandPalette(callback: () => void): void
   onMenuOpenSettings(callback: () => void): void
+  onMenuOpenRecent(callback: (path: string, type: RecentItem['type']) => void): void
   setTitle(title: string): void
 }
 

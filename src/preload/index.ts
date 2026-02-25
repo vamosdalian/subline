@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ElectronAPI } from '../shared/types'
 import type { AppSettings } from '../shared/settings'
+import type { RecentItem } from '../shared/types'
 
 const api: ElectronAPI = {
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
@@ -17,6 +18,9 @@ const api: ElectronAPI = {
   openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:set', settings),
+  getRecent: () => ipcRenderer.invoke('recent:get'),
+  addRecent: (path: string, type: RecentItem['type']) => ipcRenderer.invoke('recent:add', path, type),
+  clearRecent: () => ipcRenderer.invoke('recent:clear'),
   showConfirmSave: (fileName: string) => ipcRenderer.invoke('dialog:confirm-save', fileName),
   onAppBeforeClose: (callback: () => void) => {
     ipcRenderer.on('app:before-close', callback)
@@ -51,6 +55,9 @@ const api: ElectronAPI = {
   },
   onMenuOpenSettings: (callback: () => void) => {
     ipcRenderer.on('menu:open-settings', callback)
+  },
+  onMenuOpenRecent: (callback: (path: string, type: RecentItem['type']) => void) => {
+    ipcRenderer.on('menu:open-recent', (_event, path: string, type: RecentItem['type']) => callback(path, type))
   },
   setTitle: (title: string) => {
     ipcRenderer.send('set-title', title)

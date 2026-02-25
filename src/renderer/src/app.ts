@@ -47,6 +47,7 @@ export class App {
     this.registerCommands()
     this.registerBeforeClose()
     this.settingsReady = this.loadSettings()
+    this.loadRecentIntoWelcome()
   }
 
   private registerMenuHandlers(): void {
@@ -59,6 +60,7 @@ export class App {
     window.api.onMenuToggleSidebar(() => this.toggleSidebar())
     window.api.onMenuCommandPalette(() => this.commandPalette.toggle())
     window.api.onMenuOpenSettings(() => this.openSettings())
+    window.api.onMenuOpenRecent((path, type) => this.openRecent(path, type))
   }
 
   private registerCommands(): void {
@@ -157,14 +159,20 @@ export class App {
     this.editorManager.switchTo(tabId)
     this.updateUI()
     this.editorManager.focus()
+    if (filePath) window.api.addRecent(filePath, 'file')
   }
 
   private async openFolderDialog(): Promise<void> {
     const folderPath = await window.api.openFolderDialog()
     if (!folderPath) return
+    await this.openFolder(folderPath)
+  }
+
+  private async openFolder(folderPath: string): Promise<void> {
     await this.fileTree.loadFolder(folderPath)
     this.sidebar.classList.remove('hidden')
     this.syncTrafficLightPadding()
+    window.api.addRecent(folderPath, 'folder')
   }
 
   private async saveFile(): Promise<void> {
@@ -300,6 +308,51 @@ export class App {
     document.body.classList.toggle('theme-light', theme === 'light')
   }
 
+  private async openRecent(path: string, type: 'file' | 'folder'): Promise<void> {
+    if (type === 'folder') {
+      await this.openFolder(path)
+    } else {
+      await this.openFile(path)
+    }
+  }
+
+  private async loadRecentIntoWelcome(): Promise<void> {
+    const container = document.getElementById('welcome-recent')
+    if (!container) return
+
+    const items = await window.api.getRecent()
+    if (items.length === 0) {
+      container.innerHTML = ''
+      return
+    }
+
+    const home = items[0]?.path.match(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/)?.[0] || ''
+
+    const listHtml = items
+      .slice(0, 5)
+      .map((item) => {
+        const name = item.path.split('/').pop() || item.path
+        const dir = item.path.split('/').slice(0, -1).join('/')
+        const shortDir = home ? dir.replace(home, '~') : dir
+        return `<div class="recent-item" data-path="${item.path}" data-type="${item.type}">
+          <span class="recent-name">${name}</span>
+          <span class="recent-path">${shortDir}</span>
+        </div>`
+      })
+      .join('')
+
+    const header = `<div class="recent-header"><h3>Recent</h3></div>`
+    container.innerHTML = `${header}<div class="recent-list">${listHtml}</div>`
+
+    container.querySelectorAll('.recent-item').forEach((el) => {
+      el.addEventListener('click', () => {
+        const p = (el as HTMLElement).dataset.path!
+        const t = (el as HTMLElement).dataset.type as 'file' | 'folder'
+        this.openRecent(p, t)
+      })
+    })
+  }
+
   private toggleSidebar(): void {
     this.sidebar.classList.toggle('hidden')
     this.syncTrafficLightPadding()
@@ -336,6 +389,7 @@ export class App {
       this.statusBar.reset()
       this.fileTree.setActiveFile(null)
       window.api.setTitle('Subline')
+      this.loadRecentIntoWelcome()
     }
   }
 }
