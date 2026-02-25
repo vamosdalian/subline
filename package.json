@@ -39,20 +39,14 @@
     },
     "win": {
       "icon": "resources/icon.ico",
-      "target": [
-        "nsis",
-        "portable"
-      ]
+      "target": "nsis"
     },
     "nsis": {
       "differentialPackage": false
     },
     "linux": {
       "icon": "resources/icon.png",
-      "target": [
-        "AppImage",
-        "deb"
-      ],
+      "target": "deb",
       "category": "Development"
     }
   },

@@ -36,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Build & Package
-        run: npm run dist -- --${{ matrix.platform }}
+        run: npm run dist -- --${{ matrix.platform }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,8 +46,7 @@ jobs:
           name: release-${{ matrix.platform }}
           path: |
             release/*.dmg
-            release/*.exe
-            release/*.AppImage
+            release/*Setup*.exe
             release/*.deb
           if-no-files-found: ignore
 
