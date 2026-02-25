@@ -26,7 +26,7 @@ import {
   autocompletion,
   completionKeymap
 } from '@codemirror/autocomplete'
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { createLanguageCompartment, loadLanguage } from './language-support'
 import { createImagePasteExtension } from './image-paste'
@@ -114,6 +114,7 @@ export class EditorManager {
       autocompletion(),
       highlightActiveLine(),
       highlightSelectionMatches(),
+      search({ top: true }),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       keymap.of([
         ...defaultKeymap,
