@@ -27,6 +27,11 @@ export class App {
     this.editorContainer = document.getElementById('editor-container')!
     this.welcomeScreen = document.getElementById('welcome')!
 
+    if (localStorage.getItem('sidebarHidden') === 'true') {
+      this.sidebar.classList.add('hidden')
+    }
+    this.syncTrafficLightPadding()
+
     this.editorManager = new EditorManager(this.editorContainer)
     this.tabBar = new TabBar(
       this.tabBarEl,
@@ -175,6 +180,7 @@ export class App {
   private async openFolder(folderPath: string): Promise<void> {
     await this.fileTree.loadFolder(folderPath)
     this.sidebar.classList.remove('hidden')
+    localStorage.setItem('sidebarHidden', 'false')
     this.syncTrafficLightPadding()
     window.api.addRecent(folderPath, 'folder')
   }
@@ -359,6 +365,7 @@ export class App {
 
   private toggleSidebar(): void {
     this.sidebar.classList.toggle('hidden')
+    localStorage.setItem('sidebarHidden', String(this.sidebar.classList.contains('hidden')))
     this.syncTrafficLightPadding()
   }
 
