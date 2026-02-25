@@ -1,6 +1,6 @@
 {
   "name": "subline",
-  "version": "1.0.4",
+  "version": "0.1.0",
   "description": "A Sublime Text-like editor built with Electron and CodeMirror 6",
   "author": {
     "name": "vamosdalian",
