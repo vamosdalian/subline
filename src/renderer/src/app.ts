@@ -18,6 +18,7 @@ export class App {
   private tabBarEl: HTMLElement
   private editorContainer: HTMLElement
   private welcomeScreen: HTMLElement
+  private statusBarEl: HTMLElement
   private currentSettings: AppSettings = { ...DEFAULT_SETTINGS }
   private settingsReady: Promise<void>
 
@@ -26,6 +27,13 @@ export class App {
     this.tabBarEl = document.getElementById('tab-bar')!
     this.editorContainer = document.getElementById('editor-container')!
     this.welcomeScreen = document.getElementById('welcome')!
+    this.statusBarEl = document.getElementById('status-bar')!
+    this.statusBarEl.style.display = 'none'
+
+    if (localStorage.getItem('sidebarHidden') === 'true') {
+      this.sidebar.classList.add('hidden')
+    }
+    this.syncTrafficLightPadding()
 
     this.editorManager = new EditorManager(this.editorContainer)
     this.tabBar = new TabBar(
@@ -175,6 +183,7 @@ export class App {
   private async openFolder(folderPath: string): Promise<void> {
     await this.fileTree.loadFolder(folderPath)
     this.sidebar.classList.remove('hidden')
+    localStorage.setItem('sidebarHidden', 'false')
     this.syncTrafficLightPadding()
     window.api.addRecent(folderPath, 'folder')
   }
@@ -359,6 +368,7 @@ export class App {
 
   private toggleSidebar(): void {
     this.sidebar.classList.toggle('hidden')
+    localStorage.setItem('sidebarHidden', String(this.sidebar.classList.contains('hidden')))
     this.syncTrafficLightPadding()
   }
 
@@ -380,6 +390,7 @@ export class App {
 
     if (activeTab) {
       this.welcomeScreen.style.display = 'none'
+      this.statusBarEl.style.display = ''
       const cursor = this.editorManager.getCursorPosition()
       this.statusBar.update(cursor, activeTab.filePath)
       this.fileTree.setActiveFile(activeTab.filePath)
@@ -390,6 +401,7 @@ export class App {
       window.api.setTitle(title)
     } else {
       this.welcomeScreen.style.display = 'flex'
+      this.statusBarEl.style.display = 'none'
       this.statusBar.reset()
       this.fileTree.setActiveFile(null)
       window.api.setTitle('Subline')
