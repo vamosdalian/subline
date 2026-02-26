@@ -35,6 +35,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Sync package version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Using version: ${VERSION} (from tag ${GITHUB_REF_NAME})"
+          npm version "${VERSION}" --no-git-tag-version --allow-same-version
+
       - name: Build & Package
         run: npm run dist -- --${{ matrix.platform }} --publish never
         env:
