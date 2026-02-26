@@ -56,7 +56,8 @@ class ImageWidget extends WidgetType {
 
 function buildDecorations(
   state: EditorState,
-  getBasePath: () => string
+  getBasePath: () => string,
+  hideUrl: boolean
 ): ReturnType<typeof Decoration.set> {
   const decorations: Range<Decoration>[] = []
   const doc = state.doc
@@ -66,6 +67,12 @@ function buildDecorations(
     IMAGE_REGEX.lastIndex = 0
     let match: RegExpExecArray | null
     while ((match = IMAGE_REGEX.exec(line.text)) !== null) {
+      if (hideUrl) {
+        const urlStart = line.from + match.index + 2 + match[1].length + 1
+        const urlEnd = line.from + match.index + match[0].length
+        decorations.push(Decoration.replace({}).range(urlStart, urlEnd))
+      }
+
       decorations.push(
         Decoration.widget({
           widget: new ImageWidget(match[2], getBasePath),
@@ -78,14 +85,17 @@ function buildDecorations(
   return Decoration.set(decorations, true)
 }
 
-export function createImagePreviewExtension(getBasePath: () => string): Extension {
+export function createImagePreviewExtension(
+  getBasePath: () => string,
+  hideUrl: boolean = false
+): Extension {
   return StateField.define({
     create(state) {
-      return buildDecorations(state, getBasePath)
+      return buildDecorations(state, getBasePath, hideUrl)
     },
     update(value, tr) {
       if (tr.docChanged) {
-        return buildDecorations(tr.state, getBasePath)
+        return buildDecorations(tr.state, getBasePath, hideUrl)
       }
       return value
     },
