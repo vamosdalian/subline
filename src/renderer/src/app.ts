@@ -6,6 +6,8 @@ import { CommandPalette, Command } from './components/command-palette'
 import { SettingsPanel } from './components/settings-panel'
 import type { AppSettings } from '../../shared/settings'
 import { DEFAULT_SETTINGS } from '../../shared/settings'
+import { getThemeById, applyCSSVariables, setCustomThemes } from './themes/registry'
+import { oneDark as oneDarkDef } from './themes/builtin'
 
 export class App {
   private editorManager: EditorManager
@@ -300,6 +302,8 @@ export class App {
   }
 
   private async loadSettings(): Promise<void> {
+    const customThemes = await window.api.getCustomThemes()
+    setCustomThemes(customThemes)
     this.currentSettings = await window.api.getSettings()
     this.editorManager.setInitialSettings(this.currentSettings)
     this.applyThemeToUI(this.currentSettings.theme)
@@ -317,8 +321,9 @@ export class App {
     await window.api.setSettings(settings)
   }
 
-  private applyThemeToUI(theme: AppSettings['theme']): void {
-    document.body.classList.toggle('theme-light', theme === 'light')
+  private applyThemeToUI(themeId: string): void {
+    const theme = getThemeById(themeId) || oneDarkDef
+    applyCSSVariables(theme)
   }
 
   private async openRecent(path: string, type: 'file' | 'folder'): Promise<void> {

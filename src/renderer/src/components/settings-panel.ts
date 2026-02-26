@@ -1,5 +1,6 @@
 import type { AppSettings } from '../../../shared/settings'
 import { DEFAULT_SETTINGS } from '../../../shared/settings'
+import { getAllThemes } from '../themes/registry'
 
 function q<T extends HTMLElement>(root: HTMLElement, selector: string): T {
   return root.querySelector(selector)! as T
@@ -63,8 +64,7 @@ export class SettingsPanel {
               <span class="settings-label">Theme</span>
               <div class="settings-control">
                 <select data-key="theme">
-                  <option value="one-dark">One Dark</option>
-                  <option value="light">Light</option>
+                  ${getAllThemes().map((t) => `<option value="${t.id}">${t.name}</option>`).join('')}
                 </select>
               </div>
             </div>
@@ -122,7 +122,7 @@ export class SettingsPanel {
     const indentStyleSelect = q<HTMLSelectElement>(root, '[data-key="indentStyle"]')
 
     themeSelect.addEventListener('change', () => {
-      this.settings.theme = themeSelect.value as AppSettings['theme']
+      this.settings.theme = themeSelect.value
       this.emitSave()
     })
 

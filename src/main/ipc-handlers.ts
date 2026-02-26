@@ -4,11 +4,13 @@ import { join, basename, dirname } from 'path'
 import { tmpdir } from 'os'
 import { FileTreeNode, RecentItem } from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
+import type { ThemeDefinition } from '../shared/theme-types'
 import { buildMenu } from './menu'
 
 const SETTINGS_DIR = app.getPath('userData')
 const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json')
 const RECENT_PATH = join(SETTINGS_DIR, 'recent.json')
+const THEMES_DIR = join(SETTINGS_DIR, 'themes')
 const MAX_RECENT = 20
 
 async function loadSettings(): Promise<AppSettings> {
@@ -201,8 +203,43 @@ export function registerIpcHandlers(): void {
     buildMenu([])
   })
 
+  ipcMain.handle('themes:list-custom', async () => {
+    return await loadCustomThemes()
+  })
+
+  ipcMain.handle('themes:open-folder', async () => {
+    await mkdir(THEMES_DIR, { recursive: true })
+    shell.openPath(THEMES_DIR)
+  })
+
   ipcMain.on('set-title', (event, title: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) win.setTitle(title)
   })
+}
+
+async function loadCustomThemes(): Promise<ThemeDefinition[]> {
+  try {
+    await mkdir(THEMES_DIR, { recursive: true })
+    const entries = await readdir(THEMES_DIR)
+    const themes: ThemeDefinition[] = []
+
+    for (const entry of entries) {
+      if (!entry.endsWith('.json')) continue
+      try {
+        const raw = await readFile(join(THEMES_DIR, entry), 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (parsed.name && parsed.type && parsed.ui && parsed.editor && parsed.syntax) {
+          parsed.id = parsed.id || entry.replace('.json', '')
+          themes.push(parsed as ThemeDefinition)
+        }
+      } catch {
+        // skip malformed theme files
+      }
+    }
+
+    return themes
+  } catch {
+    return []
+  }
 }
