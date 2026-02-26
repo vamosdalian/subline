@@ -68,9 +68,9 @@ function buildDecorations(
     let match: RegExpExecArray | null
     while ((match = IMAGE_REGEX.exec(line.text)) !== null) {
       if (hideUrl) {
-        const urlStart = line.from + match.index + 2 + match[1].length + 1
-        const urlEnd = line.from + match.index + match[0].length
-        decorations.push(Decoration.replace({}).range(urlStart, urlEnd))
+        const matchFrom = line.from + match.index
+        const matchTo = matchFrom + match[0].length
+        decorations.push(Decoration.replace({}).range(matchFrom, matchTo))
       }
 
       decorations.push(

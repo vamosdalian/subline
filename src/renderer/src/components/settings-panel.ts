@@ -107,9 +107,6 @@ export class SettingsPanel {
                 </select>
               </div>
             </div>
-          </div>
-          <div class="settings-section">
-            <div class="settings-section-title">Images</div>
             <div class="settings-row">
               <span class="settings-label">Auto Render Images</span>
               <div class="settings-control">
