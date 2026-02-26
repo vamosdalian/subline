@@ -1,5 +1,5 @@
 export interface AppSettings {
-  theme: 'one-dark' | 'light'
+  theme: string
   fontFamily: string
   fontSize: number
   tabSize: number

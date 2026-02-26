@@ -19,6 +19,7 @@ export interface RecentItem {
 }
 
 import type { AppSettings } from './settings'
+import type { ThemeDefinition } from './theme-types'
 
 export interface ElectronAPI {
   readFile(filePath: string): Promise<string>
@@ -33,6 +34,8 @@ export interface ElectronAPI {
   openPath(filePath: string): Promise<void>
   getSettings(): Promise<AppSettings>
   setSettings(settings: AppSettings): Promise<void>
+  getCustomThemes(): Promise<ThemeDefinition[]>
+  openThemesFolder(): Promise<void>
   getRecent(): Promise<RecentItem[]>
   addRecent(path: string, type: RecentItem['type']): Promise<void>
   clearRecent(): Promise<void>

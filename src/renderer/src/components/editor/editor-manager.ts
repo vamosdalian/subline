@@ -27,8 +27,9 @@ import {
   completionKeymap
 } from '@codemirror/autocomplete'
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { createLanguageCompartment, loadLanguage } from './language-support'
+import { getThemeById, buildCMTheme } from '../../themes/registry'
+import { oneDark as oneDarkDef } from '../../themes/builtin'
 import { createImagePasteExtension } from './image-paste'
 import { createImagePreviewExtension } from './image-widget'
 import type { AppSettings } from '../../../../shared/settings'
@@ -55,8 +56,9 @@ function dirname(filePath: string): string {
 
 type ChangeCallback = () => void
 
-function buildThemeExtension(theme: AppSettings['theme']): Extension {
-  return theme === 'one-dark' ? oneDark : []
+function buildThemeExtension(themeId: string): Extension {
+  const theme = getThemeById(themeId) || oneDarkDef
+  return buildCMTheme(theme)
 }
 
 function buildFontExtension(fontFamily: string, fontSize: number): Extension {
