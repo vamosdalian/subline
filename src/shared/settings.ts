@@ -4,6 +4,8 @@ export interface AppSettings {
   fontSize: number
   tabSize: number
   indentWithTabs: boolean
+  autoRenderImages: boolean
+  hideImageUrl: boolean
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -11,5 +13,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   fontFamily: 'Menlo, Monaco, Consolas, monospace',
   fontSize: 14,
   tabSize: 2,
-  indentWithTabs: false
+  indentWithTabs: false,
+  autoRenderImages: true,
+  hideImageUrl: false
 }

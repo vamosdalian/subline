@@ -107,6 +107,24 @@ export class SettingsPanel {
                 </select>
               </div>
             </div>
+            <div class="settings-row">
+              <span class="settings-label">Auto Render Images</span>
+              <div class="settings-control">
+                <select data-key="autoRenderImages">
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Hide Image URL</span>
+              <div class="settings-control">
+                <select data-key="hideImageUrl">
+                  <option value="off">Off</option>
+                  <option value="on">On</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       </div>`
@@ -149,6 +167,20 @@ export class SettingsPanel {
       this.settings.indentWithTabs = indentStyleSelect.value === 'tabs'
       this.emitSave()
     })
+
+    const autoRenderSelect = q<HTMLSelectElement>(root, '[data-key="autoRenderImages"]')
+    const hideUrlSelect = q<HTMLSelectElement>(root, '[data-key="hideImageUrl"]')
+
+    autoRenderSelect.addEventListener('change', () => {
+      this.settings.autoRenderImages = autoRenderSelect.value === 'on'
+      hideUrlSelect.disabled = !this.settings.autoRenderImages
+      this.emitSave()
+    })
+
+    hideUrlSelect.addEventListener('change', () => {
+      this.settings.hideImageUrl = hideUrlSelect.value === 'on'
+      this.emitSave()
+    })
   }
 
   private populateControls(): void {
@@ -166,6 +198,10 @@ export class SettingsPanel {
     q(root, '[data-display="fontSize"]').textContent = `${s.fontSize}px`
     q<HTMLSelectElement>(root, '[data-key="tabSize"]').value = String(s.tabSize)
     q<HTMLSelectElement>(root, '[data-key="indentStyle"]').value = s.indentWithTabs ? 'tabs' : 'spaces'
+    q<HTMLSelectElement>(root, '[data-key="autoRenderImages"]').value = s.autoRenderImages ? 'on' : 'off'
+    const hideUrlSelect = q<HTMLSelectElement>(root, '[data-key="hideImageUrl"]')
+    hideUrlSelect.value = s.hideImageUrl ? 'on' : 'off'
+    hideUrlSelect.disabled = !s.autoRenderImages
   }
 
   private emitSave(): void {

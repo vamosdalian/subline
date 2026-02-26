@@ -87,6 +87,7 @@ export class EditorManager {
   private themeCompartment = new Compartment()
   private fontCompartment = new Compartment()
   private tabSizeCompartment = new Compartment()
+  private imageCompartment = new Compartment()
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -138,10 +139,7 @@ export class EditorManager {
           fileName: tab?.fileName ?? ""
         };
       }),
-      createImagePreviewExtension(() => {
-        const tab = this.getActiveTab()
-        return tab?.filePath ? dirname(tab.filePath) : ''
-      }),
+      this.imageCompartment.of(this.buildImageExtension()),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null
@@ -337,6 +335,17 @@ export class EditorManager {
     }
   }
 
+  private buildImageExtension(): Extension {
+    if (!this.settings.autoRenderImages) return []
+    return createImagePreviewExtension(
+      () => {
+        const tab = this.getActiveTab()
+        return tab?.filePath ? dirname(tab.filePath) : ''
+      },
+      this.settings.hideImageUrl
+    )
+  }
+
   setInitialSettings(settings: AppSettings): void {
     this.settings = { ...settings }
   }
@@ -349,7 +358,8 @@ export class EditorManager {
       effects: [
         this.themeCompartment.reconfigure(buildThemeExtension(settings.theme)),
         this.fontCompartment.reconfigure(buildFontExtension(settings.fontFamily, settings.fontSize)),
-        this.tabSizeCompartment.reconfigure(buildTabExtension(settings.tabSize, settings.indentWithTabs))
+        this.tabSizeCompartment.reconfigure(buildTabExtension(settings.tabSize, settings.indentWithTabs)),
+        this.imageCompartment.reconfigure(this.buildImageExtension())
       ]
     })
   }

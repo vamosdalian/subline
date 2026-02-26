@@ -25,21 +25,43 @@ class ImageWidget extends WidgetType {
     wrapper.style.padding = '4px 0'
 
     const img = document.createElement('img')
-    img.src = 'local-file://' + encodeURI(this.resolvedSrc())
+    const resolvedPath = this.resolvedSrc()
     img.style.maxWidth = '100%'
     img.style.maxHeight = '300px'
     img.style.borderRadius = '4px'
     img.style.display = 'block'
     img.style.cursor = 'pointer'
+
+    const triggerMeasure = (): void => {
+      const request = (): boolean => {
+        const view = EditorView.findFromDOM(wrapper)
+        if (!view) return false
+        view.requestMeasure()
+        return true
+      }
+
+      if (request()) return
+      requestAnimationFrame(() => {
+        if (request()) return
+        setTimeout(() => {
+          request()
+        }, 0)
+      })
+    }
+
+    img.onload = triggerMeasure
     img.onerror = () => {
       wrapper.style.display = 'none'
+      triggerMeasure()
     }
     img.ondblclick = (e) => {
       e.preventDefault()
-      window.api.openPath(this.resolvedSrc())
+      window.api.openPath(resolvedPath)
     }
+    img.src = 'local-file://' + encodeURI(resolvedPath)
 
     wrapper.appendChild(img)
+    triggerMeasure()
     return wrapper
   }
 
@@ -56,7 +78,8 @@ class ImageWidget extends WidgetType {
 
 function buildDecorations(
   state: EditorState,
-  getBasePath: () => string
+  getBasePath: () => string,
+  hideUrl: boolean
 ): ReturnType<typeof Decoration.set> {
   const decorations: Range<Decoration>[] = []
   const doc = state.doc
@@ -66,10 +89,17 @@ function buildDecorations(
     IMAGE_REGEX.lastIndex = 0
     let match: RegExpExecArray | null
     while ((match = IMAGE_REGEX.exec(line.text)) !== null) {
+      if (hideUrl) {
+        const matchFrom = line.from + match.index
+        const matchTo = matchFrom + match[0].length
+        decorations.push(Decoration.replace({}).range(matchFrom, matchTo))
+      }
+
       decorations.push(
         Decoration.widget({
           widget: new ImageWidget(match[2], getBasePath),
-          side: 1
+          side: 1,
+          block: true
         }).range(line.to)
       )
     }
@@ -78,14 +108,17 @@ function buildDecorations(
   return Decoration.set(decorations, true)
 }
 
-export function createImagePreviewExtension(getBasePath: () => string): Extension {
+export function createImagePreviewExtension(
+  getBasePath: () => string,
+  hideUrl: boolean = false
+): Extension {
   return StateField.define({
     create(state) {
-      return buildDecorations(state, getBasePath)
+      return buildDecorations(state, getBasePath, hideUrl)
     },
     update(value, tr) {
       if (tr.docChanged) {
-        return buildDecorations(tr.state, getBasePath)
+        return buildDecorations(tr.state, getBasePath, hideUrl)
       }
       return value
     },
