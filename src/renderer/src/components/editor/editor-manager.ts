@@ -34,6 +34,7 @@ import { createImagePasteExtension } from './image-paste'
 import { createImagePreviewExtension } from './image-widget'
 import type { AppSettings } from '../../../../shared/settings'
 import { DEFAULT_SETTINGS } from '../../../../shared/settings'
+import type { SessionSnapshot, SessionTabSnapshot } from '../../../../shared/session'
 
 export interface EditorTab {
   id: string
@@ -42,6 +43,11 @@ export interface EditorTab {
   state: EditorState
   isDirty: boolean
   languageCompartment: Compartment
+}
+
+interface CreateTabOptions {
+  isDirty?: boolean
+  cursorOffset?: number
 }
 
 function basename(filePath: string): string {
@@ -153,14 +159,16 @@ export class EditorManager {
     ]
   }
 
-  createTab(filePath: string | null, content: string, fileName?: string): string {
+  createTab(filePath: string | null, content: string, fileName?: string, options?: CreateTabOptions): string {
     const id = `tab-${++this.tabIdCounter}`
     const name = fileName || (filePath ? basename(filePath) : 'untitled')
 
     const { compartment } = createLanguageCompartment()
+    const cursorOffset = Math.max(0, Math.min(options?.cursorOffset ?? 0, content.length))
 
     const state = EditorState.create({
       doc: content,
+      selection: { anchor: cursorOffset },
       extensions: this.createExtensions(compartment)
     })
 
@@ -169,7 +177,7 @@ export class EditorManager {
       filePath,
       fileName: name,
       state,
-      isDirty: false,
+      isDirty: options?.isDirty ?? false,
       languageCompartment: compartment
     }
 
@@ -309,10 +317,16 @@ export class EditorManager {
     return Array.from(this.tabs.values()).some((t) => t.isDirty)
   }
 
-  async migrateTemporaryImages(filePath: string): Promise<void> {
-    if (!this.activeTabId || !this.view) return
+  async migrateTemporaryImages(filePath: string, tabId?: string): Promise<void> {
+    const targetTabId = tabId || this.activeTabId
+    if (!targetTabId) return
 
-    const content = this.view.state.doc.toString()
+    const tab = this.tabs.get(targetTabId)
+    if (!tab) return
+
+    const isActiveTab = targetTabId === this.activeTabId && !!this.view
+    const state = isActiveTab && this.view ? this.view.state : tab.state
+    const content = state.doc.toString()
     const regex = /!\[([^\]]*)\]\(([^)]+)\)/g
     const changes: { from: number; to: number; insert: string }[] = []
     const targetDir = dirname(filePath)
@@ -331,7 +345,64 @@ export class EditorManager {
     }
 
     if (changes.length > 0) {
-      this.view.dispatch({ changes })
+      if (isActiveTab && this.view) {
+        this.view.dispatch({ changes })
+      } else {
+        tab.state = tab.state.update({ changes }).state
+        this.emitChange()
+      }
+    }
+  }
+
+  getSessionSnapshot(): SessionSnapshot {
+    const tabs = Array.from(this.tabs.values())
+    const activeTabIndex = tabs.findIndex((tab) => tab.id === this.activeTabId)
+    const serializedTabs: SessionTabSnapshot[] = tabs.map((tab) => {
+      const state = tab.id === this.activeTabId && this.view ? this.view.state : tab.state
+      return {
+        filePath: tab.filePath,
+        fileName: tab.fileName,
+        content: state.doc.toString(),
+        isDirty: tab.isDirty,
+        cursorOffset: state.selection.main.head
+      }
+    })
+
+    return {
+      tabs: serializedTabs,
+      activeTabIndex: activeTabIndex >= 0 ? activeTabIndex : 0,
+      updatedAt: Date.now()
+    }
+  }
+
+  restoreSession(snapshot: SessionSnapshot): boolean {
+    this.resetTabs()
+
+    if (snapshot.tabs.length === 0) {
+      this.emitChange()
+      return false
+    }
+
+    for (const tab of snapshot.tabs) {
+      this.createTab(tab.filePath, tab.content, tab.fileName, {
+        isDirty: tab.isDirty,
+        cursorOffset: tab.cursorOffset
+      })
+    }
+
+    const tabIds = Array.from(this.tabs.keys())
+    const activeIndex = Math.max(0, Math.min(snapshot.activeTabIndex, tabIds.length - 1))
+    this.switchTo(tabIds[activeIndex])
+    return true
+  }
+
+  private resetTabs(): void {
+    this.tabs.clear()
+    this.activeTabId = null
+    this.tabIdCounter = 0
+    if (this.view) {
+      this.view.destroy()
+      this.view = null
     }
   }
 
