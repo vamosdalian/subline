@@ -25,21 +25,43 @@ class ImageWidget extends WidgetType {
     wrapper.style.padding = '4px 0'
 
     const img = document.createElement('img')
-    img.src = 'local-file://' + encodeURI(this.resolvedSrc())
+    const resolvedPath = this.resolvedSrc()
     img.style.maxWidth = '100%'
     img.style.maxHeight = '300px'
     img.style.borderRadius = '4px'
     img.style.display = 'block'
     img.style.cursor = 'pointer'
+
+    const triggerMeasure = (): void => {
+      const request = (): boolean => {
+        const view = EditorView.findFromDOM(wrapper)
+        if (!view) return false
+        view.requestMeasure()
+        return true
+      }
+
+      if (request()) return
+      requestAnimationFrame(() => {
+        if (request()) return
+        setTimeout(() => {
+          request()
+        }, 0)
+      })
+    }
+
+    img.onload = triggerMeasure
     img.onerror = () => {
       wrapper.style.display = 'none'
+      triggerMeasure()
     }
     img.ondblclick = (e) => {
       e.preventDefault()
-      window.api.openPath(this.resolvedSrc())
+      window.api.openPath(resolvedPath)
     }
+    img.src = 'local-file://' + encodeURI(resolvedPath)
 
     wrapper.appendChild(img)
+    triggerMeasure()
     return wrapper
   }
 
@@ -76,7 +98,8 @@ function buildDecorations(
       decorations.push(
         Decoration.widget({
           widget: new ImageWidget(match[2], getBasePath),
-          side: 1
+          side: 1,
+          block: true
         }).range(line.to)
       )
     }
