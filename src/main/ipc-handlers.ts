@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import { readFile, writeFile, readdir, stat, mkdir, copyFile, unlink } from 'fs/promises'
 import { join, basename, dirname } from 'path'
 import { tmpdir } from 'os'
@@ -6,8 +6,8 @@ import { FileTreeNode, RecentItem } from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
 import type { ThemeDefinition } from '../shared/theme-types'
 import { buildMenu } from './menu'
+import { SETTINGS_DIR } from './paths'
 
-const SETTINGS_DIR = app.getPath('userData')
 const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json')
 const RECENT_PATH = join(SETTINGS_DIR, 'recent.json')
 const THEMES_DIR = join(SETTINGS_DIR, 'themes')

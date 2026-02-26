@@ -2,6 +2,7 @@ import { Menu, BrowserWindow, app } from 'electron'
 import { writeFile } from 'fs/promises'
 import { join, basename } from 'path'
 import type { RecentItem } from '../shared/types'
+import { SETTINGS_DIR } from './paths'
 
 function send(channel: string, ...args: unknown[]): void {
   const win = BrowserWindow.getFocusedWindow()
@@ -22,7 +23,7 @@ export function buildMenu(recentItems: RecentItem[] = []): void {
           {
             label: 'Clear Recent',
             click: async () => {
-              await writeFile(join(app.getPath('userData'), 'recent.json'), '[]', 'utf-8')
+              await writeFile(join(SETTINGS_DIR, 'recent.json'), '[]', 'utf-8')
               buildMenu([])
             }
           }
