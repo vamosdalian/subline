@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { ElectronAPI } from '../shared/types'
 import type { AppSettings } from '../shared/settings'
 import type { RecentItem } from '../shared/types'
+import type { SessionSnapshot } from '../shared/session'
 
 const api: ElectronAPI = {
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
@@ -23,6 +24,9 @@ const api: ElectronAPI = {
   getRecent: () => ipcRenderer.invoke('recent:get'),
   addRecent: (path: string, type: RecentItem['type']) => ipcRenderer.invoke('recent:add', path, type),
   clearRecent: () => ipcRenderer.invoke('recent:clear'),
+  getSession: () => ipcRenderer.invoke('session:get') as Promise<SessionSnapshot | null>,
+  setSession: (snapshot: SessionSnapshot) => ipcRenderer.invoke('session:set', snapshot),
+  clearSession: () => ipcRenderer.invoke('session:clear'),
   showConfirmSave: (fileName: string) => ipcRenderer.invoke('dialog:confirm-save', fileName),
   onAppBeforeClose: (callback: () => void) => {
     ipcRenderer.on('app:before-close', callback)

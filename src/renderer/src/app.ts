@@ -6,6 +6,7 @@ import { CommandPalette, Command } from './components/command-palette'
 import { SettingsPanel } from './components/settings-panel'
 import type { AppSettings } from '../../shared/settings'
 import { DEFAULT_SETTINGS } from '../../shared/settings'
+import type { SessionSnapshot } from '../../shared/session'
 import { getThemeById, applyCSSVariables, setCustomThemes } from './themes/registry'
 import { oneDark as oneDarkDef } from './themes/builtin'
 
@@ -23,6 +24,8 @@ export class App {
   private statusBarEl: HTMLElement
   private currentSettings: AppSettings = { ...DEFAULT_SETTINGS }
   private settingsReady: Promise<void>
+  private sessionPersistTimer: number | null = null
+  private lastSessionFingerprint = ''
 
   constructor() {
     this.sidebar = document.getElementById('sidebar')!
@@ -60,8 +63,15 @@ export class App {
     this.registerMenuHandlers()
     this.registerCommands()
     this.registerBeforeClose()
-    this.settingsReady = this.loadSettings()
-    this.loadRecentIntoWelcome()
+    this.settingsReady = this.initializeAppState()
+  }
+
+  private async initializeAppState(): Promise<void> {
+    await this.loadSettings()
+    const restored = await this.restoreSession()
+    if (!restored) {
+      await this.loadRecentIntoWelcome()
+    }
   }
 
   private registerMenuHandlers(): void {
@@ -139,6 +149,7 @@ export class App {
     this.editorManager.switchTo(tabId)
     this.updateUI()
     this.editorManager.focus()
+    this.schedulePersistSession()
   }
 
   private async openFileDialog(): Promise<void> {
@@ -153,6 +164,7 @@ export class App {
       this.editorManager.switchTo(existing.id)
       this.updateUI()
       this.editorManager.focus()
+      this.schedulePersistSession()
       return
     }
 
@@ -166,6 +178,7 @@ export class App {
       this.editorManager.switchTo(existing.id)
       this.updateUI()
       this.editorManager.focus()
+      this.schedulePersistSession()
       return
     }
 
@@ -174,6 +187,7 @@ export class App {
     this.updateUI()
     this.editorManager.focus()
     if (filePath) window.api.addRecent(filePath, 'file')
+    this.schedulePersistSession()
   }
 
   private async openFolderDialog(): Promise<void> {
@@ -195,11 +209,12 @@ export class App {
     if (!tab) return
 
     if (tab.filePath) {
-      await this.editorManager.migrateTemporaryImages(tab.filePath)
+      await this.editorManager.migrateTemporaryImages(tab.filePath, tab.id)
       const content = this.editorManager.getContent()
       await window.api.writeFile(tab.filePath, content)
       this.editorManager.markSaved(tab.id)
       this.updateUI()
+      this.schedulePersistSession()
     } else {
       await this.saveFileAs()
     }
@@ -212,17 +227,19 @@ export class App {
     const filePath = await window.api.saveFileDialog(tab.filePath || undefined)
     if (!filePath) return
 
-    await this.editorManager.migrateTemporaryImages(filePath)
+    await this.editorManager.migrateTemporaryImages(filePath, tab.id)
     const content = this.editorManager.getContent()
     await window.api.writeFile(filePath, content)
     this.editorManager.markSaved(tab.id, filePath)
     this.updateUI()
+    this.schedulePersistSession()
   }
 
   private selectTab(tabId: string): void {
     this.editorManager.switchTo(tabId)
     this.updateUI()
     this.editorManager.focus()
+    this.schedulePersistSession()
   }
 
   private async closeTab(tabId: string): Promise<void> {
@@ -232,6 +249,7 @@ export class App {
       if (this.editorManager.getActiveTabId()) {
         this.editorManager.focus()
       }
+      this.schedulePersistSession()
     }
   }
 
@@ -263,17 +281,19 @@ export class App {
     if (!tab) return
 
     if (tab.filePath) {
-      await this.editorManager.migrateTemporaryImages(tab.filePath)
+      await this.editorManager.migrateTemporaryImages(tab.filePath, tabId)
       const content = this.editorManager.getContent(tabId)
       await window.api.writeFile(tab.filePath, content)
       this.editorManager.markSaved(tabId)
+      this.schedulePersistSession()
     } else {
       const filePath = await window.api.saveFileDialog()
       if (!filePath) return
-      await this.editorManager.migrateTemporaryImages(filePath)
+      await this.editorManager.migrateTemporaryImages(filePath, tabId)
       const content = this.editorManager.getContent(tabId)
       await window.api.writeFile(filePath, content)
       this.editorManager.markSaved(tabId, filePath)
+      this.schedulePersistSession()
     }
   }
 
@@ -297,6 +317,11 @@ export class App {
         }
       }
 
+      if (this.sessionPersistTimer !== null) {
+        window.clearTimeout(this.sessionPersistTimer)
+        this.sessionPersistTimer = null
+      }
+      await this.persistSession()
       window.api.confirmClose(true)
     })
   }
@@ -319,6 +344,49 @@ export class App {
     this.editorManager.applySettings(settings)
     this.applyThemeToUI(settings.theme)
     await window.api.setSettings(settings)
+  }
+
+  private async restoreSession(): Promise<boolean> {
+    if (this.editorManager.getAllTabs().length > 0) return false
+    const snapshot = await window.api.getSession()
+    if (!snapshot || snapshot.tabs.length === 0) return false
+    const restored = this.editorManager.restoreSession(snapshot)
+    if (!restored) return false
+    this.lastSessionFingerprint = this.buildSessionFingerprint(snapshot)
+    this.updateUI()
+    this.editorManager.focus()
+    return true
+  }
+
+  private schedulePersistSession(): void {
+    if (this.sessionPersistTimer !== null) {
+      window.clearTimeout(this.sessionPersistTimer)
+    }
+    this.sessionPersistTimer = window.setTimeout(() => {
+      this.sessionPersistTimer = null
+      void this.persistSession()
+    }, 800)
+  }
+
+  private buildSessionFingerprint(snapshot: SessionSnapshot): string {
+    return JSON.stringify({
+      tabs: snapshot.tabs,
+      activeTabIndex: snapshot.activeTabIndex
+    })
+  }
+
+  private async persistSession(): Promise<void> {
+    const snapshot = this.editorManager.getSessionSnapshot()
+    if (snapshot.tabs.length === 0) {
+      this.lastSessionFingerprint = ''
+      await window.api.clearSession()
+      return
+    }
+
+    const fingerprint = this.buildSessionFingerprint(snapshot)
+    if (fingerprint === this.lastSessionFingerprint) return
+    this.lastSessionFingerprint = fingerprint
+    await window.api.setSession(snapshot)
   }
 
   private applyThemeToUI(themeId: string): void {
@@ -384,6 +452,7 @@ export class App {
 
   private onEditorChange(): void {
     this.updateUI()
+    this.schedulePersistSession()
   }
 
   private updateUI(): void {

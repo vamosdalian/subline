@@ -20,6 +20,7 @@ export interface RecentItem {
 
 import type { AppSettings } from './settings'
 import type { ThemeDefinition } from './theme-types'
+import type { SessionSnapshot } from './session'
 
 export interface ElectronAPI {
   readFile(filePath: string): Promise<string>
@@ -39,6 +40,9 @@ export interface ElectronAPI {
   getRecent(): Promise<RecentItem[]>
   addRecent(path: string, type: RecentItem['type']): Promise<void>
   clearRecent(): Promise<void>
+  getSession(): Promise<SessionSnapshot | null>
+  setSession(snapshot: SessionSnapshot): Promise<void>
+  clearSession(): Promise<void>
   showConfirmSave(fileName: string): Promise<'save' | 'discard' | 'cancel'>
   onAppBeforeClose(callback: () => void): void
   confirmClose(canClose: boolean): void

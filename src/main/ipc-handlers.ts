@@ -5,12 +5,14 @@ import { tmpdir } from 'os'
 import { FileTreeNode, RecentItem } from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
 import type { ThemeDefinition } from '../shared/theme-types'
+import type { SessionSnapshot } from '../shared/session'
 import { buildMenu } from './menu'
 import { SETTINGS_DIR } from './paths'
 
 const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json')
 const RECENT_PATH = join(SETTINGS_DIR, 'recent.json')
 const THEMES_DIR = join(SETTINGS_DIR, 'themes')
+const SESSION_PATH = join(SETTINGS_DIR, 'session.json')
 const MAX_RECENT = 20
 
 async function loadSettings(): Promise<AppSettings> {
@@ -39,6 +41,48 @@ export async function loadRecentItems(): Promise<RecentItem[]> {
 async function saveRecentItems(items: RecentItem[]): Promise<void> {
   await mkdir(SETTINGS_DIR, { recursive: true })
   await writeFile(RECENT_PATH, JSON.stringify(items, null, 2), 'utf-8')
+}
+
+function isValidSessionSnapshot(value: unknown): value is SessionSnapshot {
+  if (!value || typeof value !== 'object') return false
+  const snapshot = value as SessionSnapshot
+  if (!Array.isArray(snapshot.tabs)) return false
+  if (typeof snapshot.activeTabIndex !== 'number') return false
+  if (typeof snapshot.updatedAt !== 'number') return false
+
+  return snapshot.tabs.every((tab) => {
+    if (!tab || typeof tab !== 'object') return false
+    if (tab.filePath !== null && typeof tab.filePath !== 'string') return false
+    return (
+      typeof tab.fileName === 'string' &&
+      typeof tab.content === 'string' &&
+      typeof tab.isDirty === 'boolean' &&
+      typeof tab.cursorOffset === 'number'
+    )
+  })
+}
+
+async function loadSessionSnapshot(): Promise<SessionSnapshot | null> {
+  try {
+    const raw = await readFile(SESSION_PATH, 'utf-8')
+    const parsed: unknown = JSON.parse(raw)
+    return isValidSessionSnapshot(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+async function saveSessionSnapshot(snapshot: SessionSnapshot): Promise<void> {
+  await mkdir(SETTINGS_DIR, { recursive: true })
+  await writeFile(SESSION_PATH, JSON.stringify(snapshot, null, 2), 'utf-8')
+}
+
+async function clearSessionSnapshot(): Promise<void> {
+  await saveSessionSnapshot({
+    tabs: [],
+    activeTabIndex: 0,
+    updatedAt: Date.now()
+  })
 }
 
 async function addRecentItem(path: string, type: RecentItem['type']): Promise<RecentItem[]> {
@@ -201,6 +245,19 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('recent:clear', async () => {
     await saveRecentItems([])
     buildMenu([])
+  })
+
+  ipcMain.handle('session:get', async () => {
+    return await loadSessionSnapshot()
+  })
+
+  ipcMain.handle('session:set', async (_event, snapshot: SessionSnapshot) => {
+    if (!isValidSessionSnapshot(snapshot)) return
+    await saveSessionSnapshot(snapshot)
+  })
+
+  ipcMain.handle('session:clear', async () => {
+    await clearSessionSnapshot()
   })
 
   ipcMain.handle('themes:list-custom', async () => {
