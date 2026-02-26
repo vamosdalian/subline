@@ -57,7 +57,19 @@ export function buildCMTheme(theme: ThemeDefinition): Extension {
         backgroundColor: `${theme.editor.selection}`
       },
       '.cm-activeLine': {
-        backgroundColor: theme.editor.lineHighlight
+        backgroundColor: 'transparent',
+        position: 'relative'
+      },
+      '.cm-activeLine::before': {
+        content: '""',
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        backgroundColor: theme.editor.lineHighlight,
+        zIndex: -2,
+        pointerEvents: 'none'
       },
       '.cm-selectionMatch': {
         backgroundColor: `${theme.editor.selection}80`
