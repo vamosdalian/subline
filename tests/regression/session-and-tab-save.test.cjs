@@ -16,6 +16,16 @@ test('editor manager migrates temporary images for the requested tab', () => {
   assert.match(source, /tab\.state = tab\.state\.update\(\{ changes \}\)\.state/)
 })
 
+test('editor manager preserves per-tab scroll position when switching tabs', () => {
+  const source = readSource('src/renderer/src/components/editor/editor-manager.ts')
+  assert.match(source, /scrollTop: number/)
+  assert.match(source, /scrollTop: 0/)
+  assert.match(source, /private persistActiveTabViewState\(\): void/)
+  assert.match(source, /currentTab\.scrollTop = this\.view\.scrollDOM\.scrollTop/)
+  assert.match(source, /this\.restoreTabScroll\(tab\.id, tab\.scrollTop\)/)
+  assert.match(source, /private restoreTabScroll\(tabId: string, scrollTop: number\): void/)
+})
+
 test('saving a specific tab passes tab id into temporary image migration', () => {
   const source = readSource('src/renderer/src/app.ts')
   assert.match(source, /await this\.editorManager\.migrateTemporaryImages\(tab\.filePath, tabId\)/)

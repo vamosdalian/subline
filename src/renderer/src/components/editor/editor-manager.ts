@@ -42,6 +42,7 @@ export interface EditorTab {
   fileName: string
   state: EditorState
   isDirty: boolean
+  scrollTop: number
   languageCompartment: Compartment
 }
 
@@ -178,6 +179,7 @@ export class EditorManager {
       fileName: name,
       state,
       isDirty: options?.isDirty ?? false,
+      scrollTop: 0,
       languageCompartment: compartment
     }
 
@@ -189,12 +191,7 @@ export class EditorManager {
     const tab = this.tabs.get(tabId)
     if (!tab) return
 
-    if (this.activeTabId && this.view) {
-      const currentTab = this.tabs.get(this.activeTabId)
-      if (currentTab) {
-        currentTab.state = this.view.state
-      }
-    }
+    this.persistActiveTabViewState()
 
     this.activeTabId = tabId
 
@@ -214,6 +211,7 @@ export class EditorManager {
       })
     }
 
+    this.restoreTabScroll(tab.id, tab.scrollTop)
     this.emitChange()
   }
 
@@ -223,6 +221,7 @@ export class EditorManager {
 
     if (this.activeTabId === tabId && this.view) {
       tab.state = this.view.state
+      tab.scrollTop = this.view.scrollDOM.scrollTop
     }
 
     this.tabs.delete(tabId)
@@ -437,5 +436,25 @@ export class EditorManager {
 
   focus(): void {
     this.view?.focus()
+  }
+
+  private persistActiveTabViewState(): void {
+    if (!this.activeTabId || !this.view) return
+    const currentTab = this.tabs.get(this.activeTabId)
+    if (!currentTab) return
+    currentTab.state = this.view.state
+    currentTab.scrollTop = this.view.scrollDOM.scrollTop
+  }
+
+  private restoreTabScroll(tabId: string, scrollTop: number): void {
+    const apply = (): void => {
+      if (!this.view || this.activeTabId !== tabId) return
+      this.view.scrollDOM.scrollTop = scrollTop
+    }
+
+    apply()
+    requestAnimationFrame(apply)
+    setTimeout(apply, 60)
+    setTimeout(apply, 180)
   }
 }
