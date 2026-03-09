@@ -24,6 +24,50 @@
     "files": [
       "out/**/*"
     ],
+    "fileAssociations": [
+      {
+        "ext": "txt",
+        "name": "Text File",
+        "description": "Plain text document",
+        "role": "Editor"
+      },
+      {
+        "ext": "md",
+        "name": "Markdown File",
+        "description": "Markdown document",
+        "role": "Editor"
+      },
+      {
+        "ext": "sql",
+        "name": "SQL File",
+        "description": "SQL script",
+        "role": "Editor"
+      },
+      {
+        "ext": "json",
+        "name": "JSON File",
+        "description": "JSON document",
+        "role": "Editor"
+      },
+      {
+        "ext": "yaml",
+        "name": "YAML File",
+        "description": "YAML document",
+        "role": "Editor"
+      },
+      {
+        "ext": "yml",
+        "name": "YAML File",
+        "description": "YAML document",
+        "role": "Editor"
+      },
+      {
+        "ext": "log",
+        "name": "Log File",
+        "description": "Log text file",
+        "role": "Editor"
+      }
+    ],
     "extraResources": [
       {
         "from": "resources/icon.png",

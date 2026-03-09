@@ -45,6 +45,8 @@ export interface ElectronAPI {
   clearSession(): Promise<void>
   showConfirmSave(fileName: string): Promise<'save' | 'discard' | 'cancel'>
   onAppBeforeClose(callback: () => void): void
+  onAppOpenFiles(callback: (filePaths: string[]) => void): () => void
+  notifyRendererReady(): void
   confirmClose(canClose: boolean): void
   onMenuNewFile(callback: () => void): void
   onMenuOpenFile(callback: () => void): void
