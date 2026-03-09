@@ -163,9 +163,7 @@ if (!gotSingleInstanceLock) {
     buildMenu(recent)
     createWindow()
 
-    if (process.platform !== 'darwin') {
-      enqueueOpenFiles(extractOpenFilesFromArgv(process.argv))
-    }
+    enqueueOpenFiles(extractOpenFilesFromArgv(process.argv))
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
