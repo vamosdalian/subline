@@ -16,7 +16,7 @@ const pendingOpenFiles = new Set<string>()
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
 
 function normalizeOpenFilePath(rawPath: string): string | null {
-  if (!rawPath || rawPath.startsWith('-')) return null
+  if (!rawPath) return null
 
   try {
     const candidate = rawPath.startsWith('file://') ? fileURLToPath(rawPath) : rawPath
