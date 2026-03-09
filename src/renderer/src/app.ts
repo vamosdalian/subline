@@ -60,10 +60,12 @@ export class App {
     this.settingsPanel.onSettingsSave((settings) => this.onSettingsChanged(settings))
 
     this.editorManager.onChange(() => this.onEditorChange())
+    this.settingsReady = this.initializeAppState()
     this.registerMenuHandlers()
+    this.registerSystemOpenHandlers()
     this.registerCommands()
     this.registerBeforeClose()
-    this.settingsReady = this.initializeAppState()
+    window.api.notifyRendererReady()
   }
 
   private async initializeAppState(): Promise<void> {
@@ -85,6 +87,12 @@ export class App {
     window.api.onMenuCommandPalette(() => this.commandPalette.toggle())
     window.api.onMenuOpenSettings(() => this.openSettings())
     window.api.onMenuOpenRecent((path, type) => this.openRecent(path, type))
+  }
+
+  private registerSystemOpenHandlers(): void {
+    window.api.onAppOpenFiles((filePaths) => {
+      void this.openFilesFromSystem(filePaths)
+    })
   }
 
   private registerCommands(): void {
@@ -170,6 +178,19 @@ export class App {
 
     const content = await window.api.readFile(filePath)
     this.openFileWithContent(filePath, content)
+  }
+
+  private async openFilesFromSystem(filePaths: string[]): Promise<void> {
+    if (filePaths.length === 0) return
+    await this.settingsReady
+
+    for (const filePath of filePaths) {
+      try {
+        await this.openFile(filePath)
+      } catch (error) {
+        console.error('Failed to open file from system:', filePath, error)
+      }
+    }
   }
 
   private openFileWithContent(filePath: string, content: string): void {

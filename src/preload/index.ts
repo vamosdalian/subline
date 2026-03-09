@@ -31,6 +31,12 @@ const api: ElectronAPI = {
   onAppBeforeClose: (callback: () => void) => {
     ipcRenderer.on('app:before-close', callback)
   },
+  onAppOpenFiles: (callback: (filePaths: string[]) => void) => {
+    ipcRenderer.on('app:open-files', (_event, filePaths: string[]) => callback(filePaths))
+  },
+  notifyRendererReady: () => {
+    ipcRenderer.send('app:renderer-ready')
+  },
   confirmClose: (canClose: boolean) => {
     ipcRenderer.send('app:close-response', canClose)
   },
