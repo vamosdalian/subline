@@ -18,6 +18,7 @@
   "build": {
     "appId": "com.subline.app",
     "productName": "Subline",
+    "artifactName": "${productName}_${version}_${os}_${arch}.${ext}",
     "directories": {
       "output": "release"
     },
