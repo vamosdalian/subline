@@ -247,3 +247,14 @@
 .cm-editor .cm-searchMatch-selected {
   background: rgba(255, 150, 0, 0.5);
 }
+
+.cm-editor .cm-image-line {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.cm-image-preview.selected img {
+  box-shadow: 0 0 0 2px var(--accent-blue, #4a90d9);
+}

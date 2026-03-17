@@ -3,6 +3,62 @@ import { EditorState, StateField, type Extension, type Range } from '@codemirror
 
 const IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g
 
+let activeImageSelection: { wrapper: HTMLElement; cleanup: () => void } | null = null
+
+function clearImageSelection(): void {
+  if (!activeImageSelection) return
+  activeImageSelection.wrapper.classList.remove('selected')
+  activeImageSelection.cleanup()
+  activeImageSelection = null
+}
+
+function selectImageWidget(wrapper: HTMLElement, view: EditorView): void {
+  clearImageSelection()
+  wrapper.classList.add('selected')
+
+  const onKeydown = (e: KeyboardEvent): void => {
+    if (!wrapper.isConnected) {
+      clearImageSelection()
+      return
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault()
+      e.stopPropagation()
+      const pos = view.posAtDOM(wrapper)
+      const line = view.state.doc.lineAt(pos)
+      const target =
+        e.key === 'ArrowLeft'
+          ? line.number > 1
+            ? view.state.doc.line(line.number - 1).to
+            : 0
+          : line.number < view.state.doc.lines
+            ? view.state.doc.line(line.number + 1).from
+            : view.state.doc.length
+      clearImageSelection()
+      view.dispatch({ selection: { anchor: target } })
+      view.focus()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      clearImageSelection()
+      view.focus()
+    }
+  }
+
+  const onMousedown = (e: MouseEvent): void => {
+    if (!wrapper.contains(e.target as Node)) clearImageSelection()
+  }
+
+  const cleanup = (): void => {
+    document.removeEventListener('keydown', onKeydown, true)
+    document.removeEventListener('mousedown', onMousedown, true)
+  }
+
+  document.addEventListener('keydown', onKeydown, true)
+  document.addEventListener('mousedown', onMousedown, true)
+  activeImageSelection = { wrapper, cleanup }
+  view.focus()
+}
+
 class ImageWidget extends WidgetType {
   constructor(
     readonly src: string,
@@ -22,7 +78,7 @@ class ImageWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement('div')
     wrapper.className = 'cm-image-preview'
-    wrapper.style.padding = '4px 0'
+    wrapper.style.padding = '4px 0 4px 3px'
 
     const img = document.createElement('img')
     const resolvedPath = this.resolvedSrc()
@@ -54,6 +110,11 @@ class ImageWidget extends WidgetType {
       wrapper.style.display = 'none'
       triggerMeasure()
     }
+    img.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const view = EditorView.findFromDOM(wrapper)
+      if (view) selectImageWidget(wrapper, view)
+    })
     img.ondblclick = (e) => {
       e.preventDefault()
       window.api.openPath(resolvedPath)
@@ -93,6 +154,9 @@ function buildDecorations(
         const matchFrom = line.from + match.index
         const matchTo = matchFrom + match[0].length
         decorations.push(Decoration.replace({}).range(matchFrom, matchTo))
+        decorations.push(
+          Decoration.line({ attributes: { class: 'cm-image-line' } }).range(line.from)
+        )
       }
 
       decorations.push(
