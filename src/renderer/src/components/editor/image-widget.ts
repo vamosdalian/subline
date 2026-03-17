@@ -93,6 +93,9 @@ function buildDecorations(
         const matchFrom = line.from + match.index
         const matchTo = matchFrom + match[0].length
         decorations.push(Decoration.replace({}).range(matchFrom, matchTo))
+        decorations.push(
+          Decoration.line({ attributes: { class: 'cm-image-line' } }).range(line.from)
+        )
       }
 
       decorations.push(
