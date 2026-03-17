@@ -254,3 +254,7 @@
   padding: 0 !important;
   overflow: hidden;
 }
+
+.cm-image-preview.selected img {
+  box-shadow: 0 0 0 2px var(--accent-blue, #4a90d9);
+}
