@@ -94,6 +94,7 @@ export class EditorManager {
   private themeCompartment = new Compartment()
   private fontCompartment = new Compartment()
   private tabSizeCompartment = new Compartment()
+  private wordWrapCompartment = new Compartment()
   private imageCompartment = new Compartment()
 
   constructor(container: HTMLElement) {
@@ -138,6 +139,7 @@ export class EditorManager {
       this.themeCompartment.of(buildThemeExtension(this.settings.theme)),
       this.fontCompartment.of(buildFontExtension(this.settings.fontFamily, this.settings.fontSize)),
       this.tabSizeCompartment.of(buildTabExtension(this.settings.tabSize, this.settings.indentWithTabs)),
+      this.wordWrapCompartment.of(this.settings.wordWrap ? EditorView.lineWrapping : []),
       languageCompartment.of([]),
       createImagePasteExtension(() => {
         const tab = this.getActiveTab();
@@ -420,18 +422,26 @@ export class EditorManager {
     this.settings = { ...settings }
   }
 
+  private buildSettingsEffects(settings: AppSettings) {
+    return [
+      this.themeCompartment.reconfigure(buildThemeExtension(settings.theme)),
+      this.fontCompartment.reconfigure(buildFontExtension(settings.fontFamily, settings.fontSize)),
+      this.tabSizeCompartment.reconfigure(buildTabExtension(settings.tabSize, settings.indentWithTabs)),
+      this.wordWrapCompartment.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
+      this.imageCompartment.reconfigure(this.buildImageExtension())
+    ]
+  }
+
   applySettings(settings: AppSettings): void {
     this.settings = { ...settings }
-    if (!this.view) return
 
-    this.view.dispatch({
-      effects: [
-        this.themeCompartment.reconfigure(buildThemeExtension(settings.theme)),
-        this.fontCompartment.reconfigure(buildFontExtension(settings.fontFamily, settings.fontSize)),
-        this.tabSizeCompartment.reconfigure(buildTabExtension(settings.tabSize, settings.indentWithTabs)),
-        this.imageCompartment.reconfigure(this.buildImageExtension())
-      ]
-    })
+    for (const tab of this.tabs.values()) {
+      if (tab.id === this.activeTabId && this.view) {
+        this.view.dispatch({ effects: this.buildSettingsEffects(settings) })
+      } else {
+        tab.state = tab.state.update({ effects: this.buildSettingsEffects(settings) }).state
+      }
+    }
   }
 
   focus(): void {

@@ -4,6 +4,7 @@ export interface AppSettings {
   fontSize: number
   tabSize: number
   indentWithTabs: boolean
+  wordWrap: boolean
   autoRenderImages: boolean
   hideImageUrl: boolean
 }
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   fontSize: 14,
   tabSize: 2,
   indentWithTabs: false,
+  wordWrap: false,
   autoRenderImages: true,
   hideImageUrl: false
 }

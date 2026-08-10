@@ -108,6 +108,15 @@ export class SettingsPanel {
               </div>
             </div>
             <div class="settings-row">
+              <span class="settings-label">Word Wrap</span>
+              <div class="settings-control">
+                <select data-key="wordWrap">
+                  <option value="off">Off</option>
+                  <option value="on">On</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-row">
               <span class="settings-label">Auto Render Images</span>
               <div class="settings-control">
                 <select data-key="autoRenderImages">
@@ -138,6 +147,7 @@ export class SettingsPanel {
     const fontSizeValue = q(root, '[data-display="fontSize"]')
     const tabSizeSelect = q<HTMLSelectElement>(root, '[data-key="tabSize"]')
     const indentStyleSelect = q<HTMLSelectElement>(root, '[data-key="indentStyle"]')
+    const wordWrapSelect = q<HTMLSelectElement>(root, '[data-key="wordWrap"]')
 
     themeSelect.addEventListener('change', () => {
       this.settings.theme = themeSelect.value
@@ -165,6 +175,11 @@ export class SettingsPanel {
 
     indentStyleSelect.addEventListener('change', () => {
       this.settings.indentWithTabs = indentStyleSelect.value === 'tabs'
+      this.emitSave()
+    })
+
+    wordWrapSelect.addEventListener('change', () => {
+      this.settings.wordWrap = wordWrapSelect.value === 'on'
       this.emitSave()
     })
 
@@ -198,6 +213,7 @@ export class SettingsPanel {
     q(root, '[data-display="fontSize"]').textContent = `${s.fontSize}px`
     q<HTMLSelectElement>(root, '[data-key="tabSize"]').value = String(s.tabSize)
     q<HTMLSelectElement>(root, '[data-key="indentStyle"]').value = s.indentWithTabs ? 'tabs' : 'spaces'
+    q<HTMLSelectElement>(root, '[data-key="wordWrap"]').value = s.wordWrap ? 'on' : 'off'
     q<HTMLSelectElement>(root, '[data-key="autoRenderImages"]').value = s.autoRenderImages ? 'on' : 'off'
     const hideUrlSelect = q<HTMLSelectElement>(root, '[data-key="hideImageUrl"]')
     hideUrlSelect.value = s.hideImageUrl ? 'on' : 'off'
