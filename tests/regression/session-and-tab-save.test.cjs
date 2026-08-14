@@ -51,6 +51,20 @@ test('session APIs are exposed from preload and typed in shared contracts', () =
   assert.match(ipcSource, /ipcMain\.handle\('session:clear'/)
 })
 
+test('system open-file subscription returns a cleanup function', () => {
+  const preloadSource = readSource('src/preload/index.ts')
+  const typesSource = readSource('src/shared/types.ts')
+
+  assert.match(typesSource, /onAppOpenFiles\(callback: \(filePaths: string\[\]\) => void\): \(\) => void/)
+  assert.match(preloadSource, /ipcRenderer\.on\('app:open-files', listener\)/)
+  assert.match(preloadSource, /return \(\) => \{\s+ipcRenderer\.removeListener\('app:open-files', listener\)/)
+})
+
+test('web TypeScript target supports iterating Map values', () => {
+  const config = JSON.parse(readSource('tsconfig.web.json'))
+  assert.equal(config.compilerOptions.target, 'ES2022')
+})
+
 test('app initializes from saved session and persists session snapshots', () => {
   const source = readSource('src/renderer/src/app.ts')
   assert.match(source, /this\.settingsReady = this\.initializeAppState\(\)/)

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { ElectronAPI } from '../shared/types'
 import type { AppSettings } from '../shared/settings'
 import type { RecentItem } from '../shared/types'
@@ -37,7 +37,13 @@ const api: ElectronAPI = {
     ipcRenderer.on('app:before-close', callback)
   },
   onAppOpenFiles: (callback: (filePaths: string[]) => void) => {
-    ipcRenderer.on('app:open-files', (_event, filePaths: string[]) => callback(filePaths))
+    const listener = (_event: IpcRendererEvent, filePaths: string[]): void => {
+      callback(filePaths)
+    }
+    ipcRenderer.on('app:open-files', listener)
+    return () => {
+      ipcRenderer.removeListener('app:open-files', listener)
+    }
   },
   notifyRendererReady: () => {
     ipcRenderer.send('app:renderer-ready')
