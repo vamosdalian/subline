@@ -62,13 +62,21 @@ function selectImageWidget(wrapper: HTMLElement, view: EditorView): void {
 class ImageWidget extends WidgetType {
   constructor(
     readonly src: string,
+    private readonly markdown: string,
+    private readonly from: number,
+    private readonly to: number,
     private getBasePath: () => string
   ) {
     super()
   }
 
   eq(other: ImageWidget): boolean {
-    return this.src === other.src
+    return (
+      this.src === other.src &&
+      this.markdown === other.markdown &&
+      this.from === other.from &&
+      this.to === other.to
+    )
   }
 
   ignoreEvent(event: Event): boolean {
@@ -119,11 +127,74 @@ class ImageWidget extends WidgetType {
       e.preventDefault()
       window.api.openPath(resolvedPath)
     }
+    img.addEventListener('contextmenu', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const view = EditorView.findFromDOM(wrapper)
+      if (!view) return
+      selectImageWidget(wrapper, view)
+      void this.showContextMenu(view, resolvedPath).catch((error) => {
+        console.error('Image context menu action failed:', error)
+      })
+    })
     img.src = 'local-file://' + encodeURI(resolvedPath)
 
     wrapper.appendChild(img)
     triggerMeasure()
     return wrapper
+  }
+
+  private async showContextMenu(view: EditorView, resolvedPath: string): Promise<void> {
+    const action = await window.api.showImageContextMenu()
+
+    switch (action) {
+      case 'open':
+        await window.api.openPath(resolvedPath)
+        break
+      case 'reveal':
+        await window.api.revealPath(resolvedPath)
+        break
+      case 'copy-image':
+        await window.api.copyImage(resolvedPath)
+        break
+      case 'copy-path':
+        await window.api.writeClipboardText(resolvedPath)
+        break
+      case 'copy-markdown':
+        await window.api.writeClipboardText(this.markdown)
+        break
+      case 'delete-reference':
+        this.deleteReference(view)
+        break
+      case 'delete-file':
+        if (await window.api.deleteImageFile(resolvedPath)) {
+          this.deleteReference(view)
+        }
+        break
+    }
+  }
+
+  private deleteReference(view: EditorView): void {
+    const doc = view.state.doc
+    if (doc.sliceString(this.from, this.to) !== this.markdown) return
+
+    const line = doc.lineAt(this.from)
+    let from = this.from
+    let to = this.to
+
+    if (line.text.trim() === this.markdown) {
+      from = line.from
+      to = line.to
+      if (line.number < doc.lines) {
+        to += 1
+      } else if (line.number > 1) {
+        from -= 1
+      }
+    }
+
+    clearImageSelection()
+    view.dispatch({ changes: { from, to, insert: '' } })
+    view.focus()
   }
 
   private resolvedSrc(): string {
@@ -161,7 +232,13 @@ function buildDecorations(
 
       decorations.push(
         Decoration.widget({
-          widget: new ImageWidget(match[2], getBasePath),
+          widget: new ImageWidget(
+            match[2],
+            match[0],
+            line.from + match.index,
+            line.from + match.index + match[0].length,
+            getBasePath
+          ),
           side: 1,
           block: true
         }).range(line.to)

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { ElectronAPI } from '../shared/types'
 import type { AppSettings } from '../shared/settings'
 import type { RecentItem } from '../shared/types'
@@ -17,6 +17,11 @@ const api: ElectronAPI = {
   migrateImage: (tempPath: string, targetDir: string) =>
     ipcRenderer.invoke('image:migrate', tempPath, targetDir),
   openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
+  revealPath: (filePath: string) => ipcRenderer.invoke('shell:reveal-path', filePath),
+  showImageContextMenu: () => ipcRenderer.invoke('image:show-context-menu'),
+  copyImage: (filePath: string) => ipcRenderer.invoke('image:copy', filePath),
+  writeClipboardText: (text: string) => ipcRenderer.invoke('clipboard:write-text', text),
+  deleteImageFile: (filePath: string) => ipcRenderer.invoke('image:delete-file', filePath),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:set', settings),
   getCustomThemes: () => ipcRenderer.invoke('themes:list-custom'),
@@ -32,7 +37,13 @@ const api: ElectronAPI = {
     ipcRenderer.on('app:before-close', callback)
   },
   onAppOpenFiles: (callback: (filePaths: string[]) => void) => {
-    ipcRenderer.on('app:open-files', (_event, filePaths: string[]) => callback(filePaths))
+    const listener = (_event: IpcRendererEvent, filePaths: string[]): void => {
+      callback(filePaths)
+    }
+    ipcRenderer.on('app:open-files', listener)
+    return () => {
+      ipcRenderer.removeListener('app:open-files', listener)
+    }
   },
   notifyRendererReady: () => {
     ipcRenderer.send('app:renderer-ready')
