@@ -17,6 +17,11 @@ const api: ElectronAPI = {
   migrateImage: (tempPath: string, targetDir: string) =>
     ipcRenderer.invoke('image:migrate', tempPath, targetDir),
   openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
+  revealPath: (filePath: string) => ipcRenderer.invoke('shell:reveal-path', filePath),
+  showImageContextMenu: () => ipcRenderer.invoke('image:show-context-menu'),
+  copyImage: (filePath: string) => ipcRenderer.invoke('image:copy', filePath),
+  writeClipboardText: (text: string) => ipcRenderer.invoke('clipboard:write-text', text),
+  deleteImageFile: (filePath: string) => ipcRenderer.invoke('image:delete-file', filePath),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:set', settings),
   getCustomThemes: () => ipcRenderer.invoke('themes:list-custom'),

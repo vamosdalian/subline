@@ -18,6 +18,15 @@ export interface RecentItem {
   timestamp: number
 }
 
+export type ImageContextMenuAction =
+  | 'open'
+  | 'reveal'
+  | 'copy-image'
+  | 'copy-path'
+  | 'copy-markdown'
+  | 'delete-reference'
+  | 'delete-file'
+
 import type { AppSettings } from './settings'
 import type { ThemeDefinition } from './theme-types'
 import type { SessionSnapshot } from './session'
@@ -33,6 +42,11 @@ export interface ElectronAPI {
   saveImageTemp(buffer: Uint8Array): Promise<string>
   migrateImage(tempPath: string, targetDir: string): Promise<string>
   openPath(filePath: string): Promise<void>
+  revealPath(filePath: string): Promise<void>
+  showImageContextMenu(): Promise<ImageContextMenuAction | null>
+  copyImage(filePath: string): Promise<boolean>
+  writeClipboardText(text: string): Promise<void>
+  deleteImageFile(filePath: string): Promise<boolean>
   getSettings(): Promise<AppSettings>
   setSettings(settings: AppSettings): Promise<void>
   getCustomThemes(): Promise<ThemeDefinition[]>

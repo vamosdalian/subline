@@ -1,8 +1,8 @@
-import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
-import { readFile, writeFile, readdir, stat, mkdir, copyFile, unlink } from 'fs/promises'
+import { ipcMain, dialog, BrowserWindow, shell, Menu, clipboard, nativeImage } from 'electron'
+import { readFile, writeFile, readdir, stat, lstat, mkdir, copyFile, unlink } from 'fs/promises'
 import { join, basename, dirname } from 'path'
 import { tmpdir } from 'os'
-import { FileTreeNode, RecentItem } from '../shared/types'
+import { FileTreeNode, RecentItem, type ImageContextMenuAction } from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
 import type { ThemeDefinition } from '../shared/theme-types'
 import type { SessionSnapshot } from '../shared/session'
@@ -204,6 +204,111 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('shell:open-path', async (_event, filePath: string) => {
     await shell.openPath(filePath)
+  })
+
+  ipcMain.handle('shell:reveal-path', (_event, filePath: string) => {
+    shell.showItemInFolder(filePath)
+  })
+
+  ipcMain.handle('image:show-context-menu', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+
+    return new Promise<ImageContextMenuAction | null>((resolve) => {
+      let settled = false
+      const finish = (action: ImageContextMenuAction | null): void => {
+        if (settled) return
+        settled = true
+        resolve(action)
+      }
+
+      const menu = Menu.buildFromTemplate([
+        { label: '打开图片', click: () => finish('open') },
+        { label: '在 Finder 中显示', click: () => finish('reveal') },
+        { type: 'separator' },
+        { label: '复制图片', click: () => finish('copy-image') },
+        { label: '复制图片路径', click: () => finish('copy-path') },
+        { label: '复制 Markdown', click: () => finish('copy-markdown') },
+        { type: 'separator' },
+        { label: '删除图片引用', click: () => finish('delete-reference') },
+        { label: '删除图片引用和本地文件', click: () => finish('delete-file') }
+      ])
+
+      menu.popup({ window: win, callback: () => finish(null) })
+    })
+  })
+
+  ipcMain.handle('image:copy', async (event, filePath: string) => {
+    const image = nativeImage.createFromPath(filePath)
+    if (!image.isEmpty()) {
+      clipboard.writeImage(image)
+      return true
+    }
+
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      type: 'error' as const,
+      message: '无法复制图片',
+      detail: `无法读取图片文件：\n${filePath}`,
+      buttons: ['确定']
+    }
+    if (win) await dialog.showMessageBox(win, options)
+    else await dialog.showMessageBox(options)
+    return false
+  })
+
+  ipcMain.handle('clipboard:write-text', (_event, text: string) => {
+    clipboard.writeText(text)
+  })
+
+  ipcMain.handle('image:delete-file', async (event, filePath: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+
+    try {
+      const info = await lstat(filePath)
+      if (!info.isFile() && !info.isSymbolicLink()) {
+        throw new Error('目标不是普通文件')
+      }
+    } catch (error) {
+      const options = {
+        type: 'error' as const,
+        message: '无法删除图片文件',
+        detail: `${error instanceof Error ? error.message : String(error)}\n${filePath}`,
+        buttons: ['确定']
+      }
+      if (win) await dialog.showMessageBox(win, options)
+      else await dialog.showMessageBox(options)
+      return false
+    }
+
+    const confirmOptions = {
+      type: 'warning' as const,
+      message: '要删除图片引用和本地文件吗？',
+      detail: `此操作会永久删除文件，且无法通过编辑器撤销：\n${filePath}`,
+      buttons: ['取消', '删除'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    }
+    const result = win
+      ? await dialog.showMessageBox(win, confirmOptions)
+      : await dialog.showMessageBox(confirmOptions)
+    if (result.response !== 1) return false
+
+    try {
+      await unlink(filePath)
+      return true
+    } catch (error) {
+      const options = {
+        type: 'error' as const,
+        message: '删除图片文件失败',
+        detail: `${error instanceof Error ? error.message : String(error)}\n${filePath}`,
+        buttons: ['确定']
+      }
+      if (win) await dialog.showMessageBox(win, options)
+      else await dialog.showMessageBox(options)
+      return false
+    }
   })
 
   ipcMain.handle('settings:get', async () => {
