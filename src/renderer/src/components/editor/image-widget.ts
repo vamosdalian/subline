@@ -79,8 +79,8 @@ class ImageWidget extends WidgetType {
     )
   }
 
-  ignoreEvent(event: Event): boolean {
-    return event.type === 'dblclick'
+  ignoreEvent(): boolean {
+    return true
   }
 
   toDOM(): HTMLElement {
@@ -94,7 +94,8 @@ class ImageWidget extends WidgetType {
     img.style.maxHeight = '300px'
     img.style.borderRadius = '4px'
     img.style.display = 'block'
-    img.style.cursor = 'pointer'
+    img.style.cursor = 'grab'
+    img.draggable = true
 
     const triggerMeasure = (): void => {
       const request = (): boolean => {
@@ -136,6 +137,15 @@ class ImageWidget extends WidgetType {
       void this.showContextMenu(view, resolvedPath).catch((error) => {
         console.error('Image context menu action failed:', error)
       })
+    })
+    img.addEventListener('dragstart', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'
+
+      const view = EditorView.findFromDOM(wrapper)
+      if (view) selectImageWidget(wrapper, view)
+      window.api.startImageDrag(resolvedPath)
     })
     img.src = 'local-file://' + encodeURI(resolvedPath)
 

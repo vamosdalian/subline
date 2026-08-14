@@ -47,6 +47,7 @@ export interface ElectronAPI {
   copyImage(filePath: string): Promise<boolean>
   writeClipboardText(text: string): Promise<void>
   deleteImageFile(filePath: string): Promise<boolean>
+  startImageDrag(filePath: string): void
   getSettings(): Promise<AppSettings>
   setSettings(settings: AppSettings): Promise<void>
   getCustomThemes(): Promise<ThemeDefinition[]>

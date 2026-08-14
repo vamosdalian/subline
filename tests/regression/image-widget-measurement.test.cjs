@@ -87,3 +87,20 @@ test('image menu APIs are exposed through the preload contract', () => {
   assert.match(types, /showImageContextMenu\(\): Promise<ImageContextMenuAction \| null>/)
   assert.match(types, /deleteImageFile\(filePath: string\): Promise<boolean>/)
 })
+
+test('image widget starts a native file drag', () => {
+  const widget = readWidgetSource()
+  const preload = readSource('src/preload/index.ts')
+  const types = readSource('src/shared/types.ts')
+  const ipc = readSource('src/main/ipc-handlers.ts')
+
+  assert.match(widget, /img\.draggable = true/)
+  assert.match(widget, /ignoreEvent\(\): boolean \{\s+return true/)
+  assert.match(widget, /addEventListener\('dragstart'/)
+  assert.match(widget, /window\.api\.startImageDrag\(resolvedPath\)/)
+  assert.match(preload, /startImageDrag: \(filePath: string\) => ipcRenderer\.send\('image:start-drag', filePath\)/)
+  assert.match(types, /startImageDrag\(filePath: string\): void/)
+  assert.match(ipc, /ipcMain\.on\('image:start-drag'/)
+  assert.match(ipc, /if \(!isAbsolute\(filePath\) \|\| !statSync\(filePath\)\.isFile\(\)\) return/)
+  assert.match(ipc, /event\.sender\.startDrag\(\{ file: filePath, icon \}\)/)
+})

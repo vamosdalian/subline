@@ -1,6 +1,7 @@
 import { ipcMain, dialog, BrowserWindow, shell, Menu, clipboard, nativeImage } from 'electron'
+import { statSync } from 'fs'
 import { readFile, writeFile, readdir, stat, lstat, mkdir, copyFile, unlink } from 'fs/promises'
-import { join, basename, dirname } from 'path'
+import { join, basename, dirname, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 import { FileTreeNode, RecentItem, type ImageContextMenuAction } from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
@@ -255,6 +256,30 @@ export function registerIpcHandlers(): void {
     if (win) await dialog.showMessageBox(win, options)
     else await dialog.showMessageBox(options)
     return false
+  })
+
+  ipcMain.on('image:start-drag', (event, filePath: string) => {
+    try {
+      if (!isAbsolute(filePath) || !statSync(filePath).isFile()) return
+
+      const image = nativeImage.createFromPath(filePath)
+      if (image.isEmpty()) return
+
+      const size = image.getSize()
+      const scale = Math.min(1, 64 / Math.max(size.width, size.height))
+      const icon =
+        scale < 1
+          ? image.resize({
+              width: Math.max(1, Math.round(size.width * scale)),
+              height: Math.max(1, Math.round(size.height * scale)),
+              quality: 'good'
+            })
+          : image
+
+      event.sender.startDrag({ file: filePath, icon })
+    } catch (error) {
+      console.error('Failed to start image drag:', error)
+    }
   })
 
   ipcMain.handle('clipboard:write-text', (_event, text: string) => {
