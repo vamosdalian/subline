@@ -22,6 +22,7 @@ const api: ElectronAPI = {
   copyImage: (filePath: string) => ipcRenderer.invoke('image:copy', filePath),
   writeClipboardText: (text: string) => ipcRenderer.invoke('clipboard:write-text', text),
   deleteImageFile: (filePath: string) => ipcRenderer.invoke('image:delete-file', filePath),
+  startImageDrag: (filePath: string) => ipcRenderer.send('image:start-drag', filePath),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:set', settings),
   getCustomThemes: () => ipcRenderer.invoke('themes:list-custom'),
