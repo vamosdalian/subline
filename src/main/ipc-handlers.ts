@@ -3,7 +3,12 @@ import { statSync } from 'fs'
 import { readFile, writeFile, readdir, stat, lstat, mkdir, copyFile, unlink } from 'fs/promises'
 import { join, basename, dirname, isAbsolute } from 'path'
 import { tmpdir } from 'os'
-import { FileTreeNode, RecentItem, type ImageContextMenuAction } from '../shared/types'
+import {
+  FileTreeNode,
+  RecentItem,
+  type FolderContextMenuAction,
+  type ImageContextMenuAction
+} from '../shared/types'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
 import type { ThemeDefinition } from '../shared/theme-types'
 import type { SessionSnapshot } from '../shared/session'
@@ -44,12 +49,19 @@ async function saveRecentItems(items: RecentItem[]): Promise<void> {
   await writeFile(RECENT_PATH, JSON.stringify(items, null, 2), 'utf-8')
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
 function isValidSessionSnapshot(value: unknown): value is SessionSnapshot {
   if (!value || typeof value !== 'object') return false
   const snapshot = value as SessionSnapshot
   if (!Array.isArray(snapshot.tabs)) return false
   if (typeof snapshot.activeTabIndex !== 'number') return false
   if (typeof snapshot.updatedAt !== 'number') return false
+  // Sessions written before multi-folder support have neither field.
+  if (snapshot.folders !== undefined && !isStringArray(snapshot.folders)) return false
+  if (snapshot.expandedPaths !== undefined && !isStringArray(snapshot.expandedPaths)) return false
 
   return snapshot.tabs.every((tab) => {
     if (!tab || typeof tab !== 'object') return false
@@ -67,7 +79,12 @@ async function loadSessionSnapshot(): Promise<SessionSnapshot | null> {
   try {
     const raw = await readFile(SESSION_PATH, 'utf-8')
     const parsed: unknown = JSON.parse(raw)
-    return isValidSessionSnapshot(parsed) ? parsed : null
+    if (!isValidSessionSnapshot(parsed)) return null
+    return {
+      ...parsed,
+      folders: parsed.folders ?? [],
+      expandedPaths: parsed.expandedPaths ?? []
+    }
   } catch {
     return null
   }
@@ -82,6 +99,8 @@ async function clearSessionSnapshot(): Promise<void> {
   await saveSessionSnapshot({
     tabs: [],
     activeTabIndex: 0,
+    folders: [],
+    expandedPaths: [],
     updatedAt: Date.now()
   })
 }
@@ -95,9 +114,12 @@ async function addRecentItem(path: string, type: RecentItem['type']): Promise<Re
   return items
 }
 
-async function buildTree(dirPath: string, depth = 0): Promise<FileTreeNode[]> {
-  if (depth > 10) return []
-
+/**
+ * Reads one directory level. Sub-directories listed in `expandedPaths` are
+ * recursed into; every other directory comes back with `children` undefined,
+ * meaning "not loaded yet" (an empty array means "loaded, and empty").
+ */
+async function buildTree(dirPath: string, expandedPaths: Set<string>): Promise<FileTreeNode[]> {
   const entries = await readdir(dirPath, { withFileTypes: true })
   const nodes: FileTreeNode[] = []
 
@@ -112,7 +134,9 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileTreeNode[]> {
   for (const entry of sorted) {
     const fullPath = join(dirPath, entry.name)
     if (entry.isDirectory()) {
-      const children = await buildTree(fullPath, depth + 1)
+      const children = expandedPaths.has(fullPath)
+        ? await buildTree(fullPath, expandedPaths)
+        : undefined
       nodes.push({ name: entry.name, path: fullPath, isDirectory: true, children })
     } else {
       nodes.push({ name: entry.name, path: fullPath, isDirectory: false })
@@ -172,8 +196,8 @@ export function registerIpcHandlers(): void {
     return result.filePath
   })
 
-  ipcMain.handle('folder:read-tree', async (_event, dirPath: string) => {
-    return await buildTree(dirPath)
+  ipcMain.handle('folder:read-tree', async (_event, dirPath: string, expandedPaths?: string[]) => {
+    return await buildTree(dirPath, new Set(expandedPaths ?? []))
   })
 
   ipcMain.handle('image:save', async (_event, buffer: Uint8Array, dirPath: string) => {
@@ -233,6 +257,29 @@ export function registerIpcHandlers(): void {
         { type: 'separator' },
         { label: '删除图片引用', click: () => finish('delete-reference') },
         { label: '删除图片引用和本地文件', click: () => finish('delete-file') }
+      ])
+
+      menu.popup({ window: win, callback: () => finish(null) })
+    })
+  })
+
+  ipcMain.handle('folder:show-context-menu', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+
+    return new Promise<FolderContextMenuAction | null>((resolve) => {
+      let settled = false
+      const finish = (action: FolderContextMenuAction | null): void => {
+        if (settled) return
+        settled = true
+        resolve(action)
+      }
+
+      const menu = Menu.buildFromTemplate([
+        { label: '在 Finder 中显示', click: () => finish('reveal') },
+        { label: '刷新', click: () => finish('refresh') },
+        { type: 'separator' },
+        { label: '从侧边栏移除', click: () => finish('remove') }
       ])
 
       menu.popup({ window: win, callback: () => finish(null) })

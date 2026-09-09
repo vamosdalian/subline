@@ -355,7 +355,7 @@ export class EditorManager {
     }
   }
 
-  getSessionSnapshot(): SessionSnapshot {
+  getSessionSnapshot(): Omit<SessionSnapshot, 'folders' | 'expandedPaths'> {
     const tabs = Array.from(this.tabs.values())
     const activeTabIndex = tabs.findIndex((tab) => tab.id === this.activeTabId)
     const serializedTabs: SessionTabSnapshot[] = tabs.map((tab) => {

@@ -35,6 +35,73 @@
   padding-bottom: 8px;
 }
 
+.tree-root + .tree-root {
+  margin-top: 2px;
+}
+
+.tree-root-header {
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 4px 8px 4px 6px;
+  background: var(--bg-sidebar);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  line-height: 20px;
+}
+
+.tree-root-header:hover {
+  background: var(--bg-hover);
+}
+
+.tree-root-header.flash {
+  background: var(--bg-selection);
+}
+
+.tree-root-icon {
+  width: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+}
+
+.lucide-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.tree-root-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-root-chevron {
+  flex-shrink: 0;
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.12s ease;
+}
+
+.tree-root-header.collapsed .tree-root-chevron {
+  transform: rotate(180deg);
+}
+
+.tree-root-body.collapsed {
+  display: none;
+}
+
 .tree-item {
   display: flex;
   align-items: center;
@@ -69,8 +136,21 @@
 }
 
 .tree-item-name {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tree-item-chevron {
+  flex-shrink: 0;
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.12s ease;
+}
+
+.tree-item.collapsed .tree-item-chevron {
+  transform: rotate(180deg);
 }
 
 .tree-children {
@@ -81,9 +161,18 @@
   display: block;
 }
 
+.tree-item.loading {
+  opacity: 0.6;
+}
+
 .tree-empty {
   padding: 20px 14px;
   color: var(--text-muted);
   font-size: 12px;
   font-style: italic;
+}
+
+.tree-empty-inline {
+  padding: 2px 8px 2px 0;
+  line-height: 22px;
 }
