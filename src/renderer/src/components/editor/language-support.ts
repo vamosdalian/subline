@@ -1,35 +1,22 @@
+import { LanguageDescription } from '@codemirror/language'
+import { languages } from '@codemirror/language-data'
 import type { Extension } from '@codemirror/state'
 import { Compartment } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 
-const languageLoaders: Record<string, () => Promise<Extension>> = {
-  js: () => import('@codemirror/lang-javascript').then((m) => m.javascript()),
-  jsx: () => import('@codemirror/lang-javascript').then((m) => m.javascript({ jsx: true })),
-  ts: () => import('@codemirror/lang-javascript').then((m) => m.javascript({ typescript: true })),
-  tsx: () =>
-    import('@codemirror/lang-javascript').then((m) => m.javascript({ typescript: true, jsx: true })),
-  json: () => import('@codemirror/lang-json').then((m) => m.json()),
-  html: () => import('@codemirror/lang-html').then((m) => m.html()),
-  htm: () => import('@codemirror/lang-html').then((m) => m.html()),
-  css: () => import('@codemirror/lang-css').then((m) => m.css()),
-  py: () => import('@codemirror/lang-python').then((m) => m.python()),
-  md: () => import('@codemirror/lang-markdown').then((m) => m.markdown()),
-  markdown: () => import('@codemirror/lang-markdown').then((m) => m.markdown())
+// Languages whose default loader needs tweaking (e.g. nested highlighting).
+const loadOverrides: Record<string, () => Promise<Extension>> = {
+  Markdown: () =>
+    import('@codemirror/lang-markdown').then((m) => m.markdown({ codeLanguages: languages }))
 }
 
-const extToLanguageName: Record<string, string> = {
-  js: 'JavaScript',
-  jsx: 'JavaScript (JSX)',
-  ts: 'TypeScript',
-  tsx: 'TypeScript (TSX)',
-  json: 'JSON',
-  html: 'HTML',
-  htm: 'HTML',
-  css: 'CSS',
-  py: 'Python',
-  md: 'Markdown',
-  markdown: 'Markdown',
-  txt: 'Plain Text'
+function basename(filePath: string): string {
+  return filePath.replace(/\\/g, '/').split('/').pop()!
+}
+
+function findLanguage(filePath: string | null): LanguageDescription | null {
+  if (!filePath) return null
+  return LanguageDescription.matchFilename(languages, basename(filePath))
 }
 
 export function createLanguageCompartment(): { compartment: Compartment; extension: Extension } {
@@ -43,17 +30,18 @@ export async function loadLanguage(
   compartment: Compartment,
   isStale?: () => boolean
 ): Promise<void> {
-  const ext = filePath.split('.').pop()?.toLowerCase() || ''
-  const loader = languageLoaders[ext]
-  if (!loader) return
+  const desc = findLanguage(filePath)
+  const override = desc ? loadOverrides[desc.name] : undefined
 
-  const langExt = await loader()
+  let langExt: Extension = []
+  if (desc) {
+    langExt = await (override ? override() : desc.load())
+  }
+
   if (isStale && isStale()) return
   view.dispatch({ effects: compartment.reconfigure(langExt) })
 }
 
 export function getLanguageName(filePath: string | null): string {
-  if (!filePath) return 'Plain Text'
-  const ext = filePath.split('.').pop()?.toLowerCase() || ''
-  return extToLanguageName[ext] || 'Plain Text'
+  return findLanguage(filePath)?.name || 'Plain Text'
 }
