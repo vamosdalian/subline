@@ -2,6 +2,7 @@ export interface FileTreeNode {
   name: string
   path: string
   isDirectory: boolean
+  /** Undefined means the directory has not been read yet; [] means it is empty. */
   children?: FileTreeNode[]
 }
 
@@ -27,6 +28,8 @@ export type ImageContextMenuAction =
   | 'delete-reference'
   | 'delete-file'
 
+export type FolderContextMenuAction = 'remove' | 'reveal' | 'refresh'
+
 import type { AppSettings } from './settings'
 import type { ThemeDefinition } from './theme-types'
 import type { SessionSnapshot } from './session'
@@ -37,13 +40,14 @@ export interface ElectronAPI {
   openFileDialog(): Promise<{ filePath: string; content: string } | null>
   openFolderDialog(): Promise<string | null>
   saveFileDialog(defaultPath?: string): Promise<string | null>
-  readDirectoryTree(dirPath: string): Promise<FileTreeNode[]>
+  readDirectoryTree(dirPath: string, expandedPaths?: string[]): Promise<FileTreeNode[]>
   saveImage(buffer: Uint8Array, dirPath: string): Promise<string>
   saveImageTemp(buffer: Uint8Array): Promise<string>
   migrateImage(tempPath: string, targetDir: string): Promise<string>
   openPath(filePath: string): Promise<void>
   revealPath(filePath: string): Promise<void>
   showImageContextMenu(): Promise<ImageContextMenuAction | null>
+  showFolderContextMenu(): Promise<FolderContextMenuAction | null>
   copyImage(filePath: string): Promise<boolean>
   writeClipboardText(text: string): Promise<void>
   deleteImageFile(filePath: string): Promise<boolean>

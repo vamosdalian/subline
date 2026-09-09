@@ -70,6 +70,7 @@ export function buildMenu(recentItems: RecentItem[] = []): void {
         },
         {
           label: 'Open Folder...',
+          accelerator: 'CmdOrCtrl+Shift+O',
           click: () => send('menu:open-folder')
         },
         {

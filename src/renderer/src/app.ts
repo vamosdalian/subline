@@ -50,9 +50,11 @@ export class App {
         this.updateUI()
       }
     )
-    this.fileTree = new FileTree(document.getElementById('file-tree')!, (filePath) =>
-      this.openFile(filePath)
-    )
+    this.fileTree = new FileTree(document.getElementById('file-tree')!, {
+      onFileOpen: (filePath) => this.openFile(filePath),
+      onFolderRemove: (folderPath) => this.removeFolder(folderPath),
+      onStateChange: () => this.schedulePersistSession()
+    })
     this.statusBar = new StatusBar()
     this.commandPalette = new CommandPalette()
     this.settingsPanel = new SettingsPanel()
@@ -115,6 +117,7 @@ export class App {
       {
         id: 'file.openFolder',
         label: 'Open Folder...',
+        shortcut: `${mod}+Shift+O`,
         execute: () => this.openFolderDialog()
       },
       {
@@ -218,11 +221,21 @@ export class App {
   }
 
   private async openFolder(folderPath: string): Promise<void> {
-    await this.fileTree.loadFolder(folderPath)
+    const added = await this.fileTree.addFolder(folderPath)
+    this.revealSidebar()
+    window.api.addRecent(folderPath, 'folder')
+    if (added) this.schedulePersistSession()
+  }
+
+  private removeFolder(folderPath: string): void {
+    this.fileTree.removeFolder(folderPath)
+    this.schedulePersistSession()
+  }
+
+  private revealSidebar(): void {
     this.sidebar.classList.remove('hidden')
     localStorage.setItem('sidebarHidden', 'false')
     this.syncTrafficLightPadding()
-    window.api.addRecent(folderPath, 'folder')
   }
 
   private async saveFile(): Promise<void> {
@@ -367,13 +380,22 @@ export class App {
     await window.api.setSettings(settings)
   }
 
+  /** Returns whether any tab was restored; folders are restored either way. */
   private async restoreSession(): Promise<boolean> {
     if (this.editorManager.getAllTabs().length > 0) return false
     const snapshot = await window.api.getSession()
-    if (!snapshot || snapshot.tabs.length === 0) return false
-    const restored = this.editorManager.restoreSession(snapshot)
+    if (!snapshot) return false
+
+    if (snapshot.folders.length > 0) {
+      await this.fileTree.setFolders(snapshot.folders, snapshot.expandedPaths)
+      if (this.fileTree.getFolders().length > 0) this.revealSidebar()
+    }
+
+    const restored = snapshot.tabs.length > 0 && this.editorManager.restoreSession(snapshot)
+    // Folders that vanished from disk are dropped, so fingerprint the live state.
+    this.lastSessionFingerprint = this.buildSessionFingerprint(this.buildSessionSnapshot())
     if (!restored) return false
-    this.lastSessionFingerprint = this.buildSessionFingerprint(snapshot)
+
     this.updateUI()
     this.editorManager.focus()
     return true
@@ -389,16 +411,26 @@ export class App {
     }, 800)
   }
 
+  private buildSessionSnapshot(): SessionSnapshot {
+    return {
+      ...this.editorManager.getSessionSnapshot(),
+      folders: this.fileTree.getFolders(),
+      expandedPaths: this.fileTree.getExpandedPaths()
+    }
+  }
+
   private buildSessionFingerprint(snapshot: SessionSnapshot): string {
     return JSON.stringify({
       tabs: snapshot.tabs,
-      activeTabIndex: snapshot.activeTabIndex
+      activeTabIndex: snapshot.activeTabIndex,
+      folders: snapshot.folders,
+      expandedPaths: [...snapshot.expandedPaths].sort()
     })
   }
 
   private async persistSession(): Promise<void> {
-    const snapshot = this.editorManager.getSessionSnapshot()
-    if (snapshot.tabs.length === 0) {
+    const snapshot = this.buildSessionSnapshot()
+    if (snapshot.tabs.length === 0 && snapshot.folders.length === 0) {
       this.lastSessionFingerprint = ''
       await window.api.clearSession()
       return

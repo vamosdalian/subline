@@ -10,7 +10,8 @@ const api: ElectronAPI = {
   openFileDialog: () => ipcRenderer.invoke('file:open-dialog'),
   openFolderDialog: () => ipcRenderer.invoke('folder:open-dialog'),
   saveFileDialog: (defaultPath?: string) => ipcRenderer.invoke('file:save-dialog', defaultPath),
-  readDirectoryTree: (dirPath: string) => ipcRenderer.invoke('folder:read-tree', dirPath),
+  readDirectoryTree: (dirPath: string, expandedPaths?: string[]) =>
+    ipcRenderer.invoke('folder:read-tree', dirPath, expandedPaths),
   saveImage: (buffer: Uint8Array, dirPath: string) =>
     ipcRenderer.invoke('image:save', buffer, dirPath),
   saveImageTemp: (buffer: Uint8Array) => ipcRenderer.invoke('image:save-temp', buffer),
@@ -19,6 +20,7 @@ const api: ElectronAPI = {
   openPath: (filePath: string) => ipcRenderer.invoke('shell:open-path', filePath),
   revealPath: (filePath: string) => ipcRenderer.invoke('shell:reveal-path', filePath),
   showImageContextMenu: () => ipcRenderer.invoke('image:show-context-menu'),
+  showFolderContextMenu: () => ipcRenderer.invoke('folder:show-context-menu'),
   copyImage: (filePath: string) => ipcRenderer.invoke('image:copy', filePath),
   writeClipboardText: (text: string) => ipcRenderer.invoke('clipboard:write-text', text),
   deleteImageFile: (filePath: string) => ipcRenderer.invoke('image:delete-file', filePath),

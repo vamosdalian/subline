@@ -9,5 +9,7 @@ export interface SessionTabSnapshot {
 export interface SessionSnapshot {
   tabs: SessionTabSnapshot[]
   activeTabIndex: number
+  folders: string[]
+  expandedPaths: string[]
   updatedAt: number
 }
