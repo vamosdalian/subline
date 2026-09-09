@@ -2,6 +2,7 @@
   "name": "subline",
   "version": "0.4.0",
   "description": "A Sublime Text-like editor built with Electron and CodeMirror 6",
+  "license": "Apache-2.0",
   "author": {
     "name": "vamosdalian",
     "email": "elve960520@gmail.com"
