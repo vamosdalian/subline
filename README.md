@@ -89,6 +89,10 @@ npm run dist     # 打包当前平台的安装包，产物在 release/
 
 需要 Node.js 18 及以上版本。应用基于 Electron 与 CodeMirror 6 构建，使用 TypeScript 编写。
 
+## 许可证
+
+本项目基于 [Apache License 2.0](LICENSE) 开源，可自由使用、修改和分发，详见 LICENSE 文件。
+
 ## 致谢
 
 Subline 的交互与配色深受 [Sublime Text](https://www.sublimetext.com/) 启发，编辑体验由 [CodeMirror 6](https://codemirror.net/) 提供支持。
