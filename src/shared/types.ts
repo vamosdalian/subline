@@ -41,6 +41,9 @@ export interface ElectronAPI {
   openFolderDialog(): Promise<string | null>
   saveFileDialog(defaultPath?: string): Promise<string | null>
   readDirectoryTree(dirPath: string, expandedPaths?: string[]): Promise<FileTreeNode[]>
+  /** Replaces the set of directories whose changes are reported to `onDirectoryChanged`. */
+  watchDirectories(dirPaths: string[]): void
+  onDirectoryChanged(callback: (dirPath: string) => void): () => void
   saveImage(buffer: Uint8Array, dirPath: string): Promise<string>
   saveImageTemp(buffer: Uint8Array): Promise<string>
   migrateImage(tempPath: string, targetDir: string): Promise<string>

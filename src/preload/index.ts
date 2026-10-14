@@ -12,6 +12,16 @@ const api: ElectronAPI = {
   saveFileDialog: (defaultPath?: string) => ipcRenderer.invoke('file:save-dialog', defaultPath),
   readDirectoryTree: (dirPath: string, expandedPaths?: string[]) =>
     ipcRenderer.invoke('folder:read-tree', dirPath, expandedPaths),
+  watchDirectories: (dirPaths: string[]) => ipcRenderer.send('folder:watch', dirPaths),
+  onDirectoryChanged: (callback: (dirPath: string) => void) => {
+    const listener = (_event: IpcRendererEvent, dirPath: string): void => {
+      callback(dirPath)
+    }
+    ipcRenderer.on('folder:changed', listener)
+    return () => {
+      ipcRenderer.removeListener('folder:changed', listener)
+    }
+  },
   saveImage: (buffer: Uint8Array, dirPath: string) =>
     ipcRenderer.invoke('image:save', buffer, dirPath),
   saveImageTemp: (buffer: Uint8Array) => ipcRenderer.invoke('image:save-temp', buffer),
