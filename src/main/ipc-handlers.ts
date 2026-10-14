@@ -13,6 +13,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../shared/settings'
 import type { ThemeDefinition } from '../shared/theme-types'
 import type { SessionSnapshot } from '../shared/session'
 import { buildMenu } from './menu'
+import { setWatchedDirectories } from './folder-watcher'
 import { SETTINGS_DIR } from './paths'
 
 const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json')
@@ -198,6 +199,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('folder:read-tree', async (_event, dirPath: string, expandedPaths?: string[]) => {
     return await buildTree(dirPath, new Set(expandedPaths ?? []))
+  })
+
+  ipcMain.on('folder:watch', (event, dirPaths: unknown) => {
+    if (!isStringArray(dirPaths)) return
+    setWatchedDirectories(event.sender, dirPaths)
   })
 
   ipcMain.handle('image:save', async (_event, buffer: Uint8Array, dirPath: string) => {

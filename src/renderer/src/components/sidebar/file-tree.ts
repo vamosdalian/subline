@@ -22,11 +22,15 @@ export class FileTree {
   private trees = new Map<string, FileTreeNode[]>()
   private expanded = new Set<string>()
   private loading = new Set<string>()
+  /** Roots being re-read after a disk change; true means another change arrived meanwhile. */
+  private refreshing = new Map<string, boolean>()
+  private watchedKey = ''
   private activeFilePath: string | null = null
 
   constructor(container: HTMLElement, callbacks: FileTreeCallbacks) {
     this.container = container
     this.callbacks = callbacks
+    window.api.onDirectoryChanged((dirPath) => this.handleDirectoryChanged(dirPath))
     this.render()
   }
 
@@ -91,12 +95,57 @@ export class FileTree {
     if (!this.folders.includes(path)) return
 
     const loaded = await this.loadTree(path)
+    if (!this.folders.includes(path)) {
+      // Removed from the sidebar while the read was in flight.
+      this.trees.delete(path)
+      return
+    }
     if (!loaded) {
       this.callbacks.onFolderRemove(path)
       return
     }
 
     this.render()
+  }
+
+  /** A watched directory gained or lost an entry: re-read every root that shows it. */
+  private handleDirectoryChanged(dirPath: string): void {
+    for (const folder of this.folders) {
+      if (dirPath === folder || dirPath.startsWith(`${folder}/`)) {
+        void this.refreshFromDisk(folder)
+      }
+    }
+  }
+
+  private async refreshFromDisk(folderPath: string): Promise<void> {
+    if (this.refreshing.has(folderPath)) {
+      this.refreshing.set(folderPath, true)
+      return
+    }
+
+    try {
+      do {
+        this.refreshing.set(folderPath, false)
+        await this.refreshFolder(folderPath)
+      } while (this.refreshing.get(folderPath))
+    } finally {
+      this.refreshing.delete(folderPath)
+    }
+  }
+
+  /** Watches exactly the directories whose contents are on screen: roots and expanded folders. */
+  private syncWatchers(): void {
+    const watched = [
+      ...this.folders,
+      ...[...this.expanded].filter((path) =>
+        this.folders.some((folder) => path.startsWith(`${folder}/`))
+      )
+    ]
+
+    const key = watched.join('\n')
+    if (key === this.watchedKey) return
+    this.watchedKey = key
+    window.api.watchDirectories(watched)
   }
 
   setActiveFile(filePath: string | null): void {
@@ -161,6 +210,10 @@ export class FileTree {
   }
 
   private render(): void {
+    this.syncWatchers()
+
+    // Rebuilding the list must not throw the user back to the top.
+    const scrollTop = this.container.scrollTop
     this.container.innerHTML = ''
 
     if (this.folders.length === 0) {
@@ -176,6 +229,7 @@ export class FileTree {
       fragment.appendChild(this.createRoot(folder))
     }
     this.container.appendChild(fragment)
+    this.container.scrollTop = scrollTop
   }
 
   private createRoot(folderPath: string): HTMLElement {
@@ -271,8 +325,11 @@ export class FileTree {
   ): Promise<void> {
     if (this.expanded.has(node.path)) {
       this.expanded.delete(node.path)
+      // A collapsed folder is no longer watched, so read it afresh next time.
+      node.children = undefined
       childrenEl.classList.remove('expanded')
       item.classList.add('collapsed')
+      this.syncWatchers()
       this.callbacks.onStateChange()
       return
     }
@@ -300,10 +357,18 @@ export class FileTree {
         item.classList.remove('loading')
       }
 
+      if (!item.isConnected) {
+        // A refresh rebuilt the tree mid-read; let the new node pick the expansion up.
+        this.expanded.add(node.path)
+        this.render()
+        return true
+      }
+
       this.renderChildren(childrenEl, node.children, depth + 1)
     }
 
     this.expanded.add(node.path)
+    this.syncWatchers()
     childrenEl.classList.add('expanded')
     item.classList.remove('collapsed')
     return true
